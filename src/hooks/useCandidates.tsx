@@ -34,30 +34,27 @@ export const useCandidates = () => {
       console.log('Current user profile:', profile);
       console.log('User role:', profile?.role);
       
-      // First, let's get all profiles with role 'candidate'
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'candidate');
-
-      console.log('📊 Profiles query result:', { profiles, error: profilesError });
-
-      if (profilesError) {
-        console.error('❌ Error fetching profiles:', profilesError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch candidate profiles: " + profilesError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Also try to fetch ALL profiles to see what we can access
+      // Try to get all profiles first to see what we can access
       const { data: allProfiles, error: allProfilesError } = await supabase
         .from('profiles')
         .select('*');
 
       console.log('📊 All profiles query result:', { allProfiles, error: allProfilesError });
+
+      if (allProfilesError) {
+        console.error('❌ Error fetching all profiles:', allProfilesError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch profiles: " + allProfilesError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Filter for candidates (anyone who is not an admin)
+      const candidateProfiles = allProfiles?.filter(profile => profile.role === 'candidate') || [];
+      
+      console.log('📊 Candidate profiles found:', candidateProfiles);
 
       // Get all interview progress records
       const { data: progressRecords, error: progressError } = await supabase
@@ -73,10 +70,10 @@ export const useCandidates = () => {
 
       const transformedCandidates: Candidate[] = [];
 
-      if (profiles && profiles.length > 0) {
-        console.log(`✅ Found ${profiles.length} candidate profiles`);
+      if (candidateProfiles && candidateProfiles.length > 0) {
+        console.log(`✅ Found ${candidateProfiles.length} candidate profiles`);
         
-        for (const profile of profiles) {
+        for (const profile of candidateProfiles) {
           // Find the progress record for this candidate
           const progress = progressRecords?.find(p => p.user_id === profile.id);
           
