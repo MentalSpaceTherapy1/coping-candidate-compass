@@ -63,11 +63,11 @@ const Register = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validation
-    if (!formData.fullName || !formData.email || !formData.password || !formData.resume) {
+    // Validation - removed resume requirement
+    if (!formData.fullName || !formData.email || !formData.password) {
       toast({
         title: "Missing required fields",
-        description: "Please fill in all required fields and upload your resume.",
+        description: "Please fill in all required fields.",
         variant: "destructive"
       });
       setIsLoading(false);
@@ -218,15 +218,15 @@ const Register = () => {
               </div>
 
               <div>
-                <Label htmlFor="resume">Resume/CV *</Label>
+                <Label htmlFor="resume">Resume/CV</Label>
                 <div className="mt-1">
                   <label htmlFor="resume" className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
                     <div className="text-center">
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600">
-                        {formData.resume ? formData.resume.name : "Click to upload PDF or DOC"}
+                        {formData.resume ? formData.resume.name : "Click to upload PDF or DOC (optional)"}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">Required</p>
+                      <p className="text-xs text-gray-400 mt-1">Optional</p>
                     </div>
                   </label>
                   <input
@@ -236,7 +236,6 @@ const Register = () => {
                     accept=".pdf,.doc,.docx"
                     onChange={handleFileChange}
                     className="hidden"
-                    required
                   />
                 </div>
               </div>
