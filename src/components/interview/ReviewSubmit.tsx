@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,6 +95,12 @@ const ReviewSubmit = ({ data }: ReviewSubmitProps) => {
       navigate("/thank-you");
       setIsSubmitting(false);
     }, 2000);
+  };
+
+  const handleConfirmationChange = (checked: boolean | "indeterminate") => {
+    if (typeof checked === "boolean") {
+      setConfirmed(checked);
+    }
   };
 
   return (
@@ -224,7 +229,7 @@ const ReviewSubmit = ({ data }: ReviewSubmitProps) => {
               <Checkbox 
                 id="confirm" 
                 checked={confirmed} 
-                onCheckedChange={setConfirmed}
+                onCheckedChange={handleConfirmationChange}
                 disabled={!isReadyToSubmit}
               />
               <label htmlFor="confirm" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">

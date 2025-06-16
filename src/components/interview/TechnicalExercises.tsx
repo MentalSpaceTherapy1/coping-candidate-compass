@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,7 +58,7 @@ const TechnicalExercises = ({ data, onDataChange }: TechnicalExercisesProps) => 
     onDataChange("technicalExercises", answers);
   }, [answers, onDataChange]);
 
-  const handleAnswerChange = (exerciseId: string, field: string, value: string | File) => {
+  const handleAnswerChange = (exerciseId: string, field: string, value: string | File[]) => {
     setAnswers(prev => ({
       ...prev,
       [exerciseId]: {
