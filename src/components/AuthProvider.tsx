@@ -10,8 +10,7 @@ import {
   signUpUser, 
   signInUser, 
   signOutUser, 
-  updateUserProfile,
-  getUserRoleFromMetadata
+  updateUserProfile
 } from '@/services/authService';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -21,34 +20,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const loadUserProfile = async (userId: string) => {
+    console.log('Loading profile for user:', userId);
+    const profileData = await fetchUserProfile(userId);
+    if (profileData) {
+      console.log('Profile loaded from database:', profileData);
+      setProfile(profileData);
+    } else {
+      console.log('No profile found in database, user may need to be set up');
+      // Don't create fallback - let the user know they need proper setup
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session);
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile fetching to avoid potential deadlocks
-          setTimeout(async () => {
-            const profileData = await fetchUserProfile(session.user.id);
-            if (profileData) {
-              setProfile(profileData);
-            } else {
-              // Create a fallback profile from user metadata if profile fetch fails
-              const fallbackProfile: Profile = {
-                id: session.user.id,
-                email: session.user.email || '',
-                full_name: session.user.user_metadata?.full_name || session.user.email || '',
-                role: getUserRoleFromMetadata(session.user),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              };
-              setProfile(fallbackProfile);
-              console.log('Using fallback profile from metadata:', fallbackProfile);
-            }
-          }, 0);
+          // Load profile from database - don't use setTimeout
+          await loadUserProfile(session.user.id);
         } else {
           setProfile(null);
         }
@@ -58,29 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(profileData => {
-          if (profileData) {
-            setProfile(profileData);
-          } else {
-            // Create fallback profile from user metadata
-            const fallbackProfile: Profile = {
-              id: session.user.id,
-              email: session.user.email || '',
-              full_name: session.user.user_metadata?.full_name || session.user.email || '',
-              role: getUserRoleFromMetadata(session.user),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-            setProfile(fallbackProfile);
-            console.log('Using fallback profile from metadata:', fallbackProfile);
-          }
-        });
+        await loadUserProfile(session.user.id);
       }
       setLoading(false);
     });
@@ -148,10 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } else {
       // Refresh profile data
-      const profileData = await fetchUserProfile(user.id);
-      if (profileData) {
-        setProfile(profileData);
-      }
+      await loadUserProfile(user.id);
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
