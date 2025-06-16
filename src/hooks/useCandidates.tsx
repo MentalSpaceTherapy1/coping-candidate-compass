@@ -27,38 +27,33 @@ export const useCandidates = () => {
     try {
       setLoading(true);
       
-      console.log('Fetching candidates...');
+      console.log('Fetching all candidates...');
       
-      // Get all candidate profiles (guaranteed to exist for all users)
-      const { data: profiles, error: profilesError } = await supabase
+      // Get all candidate profiles with their interview progress in one query
+      const { data: candidatesData, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          id,
+          full_name,
+          email,
+          role,
+          created_at,
+          interview_progress (
+            submission_status,
+            submitted_at,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('role', 'candidate');
 
-      console.log('Candidate profiles:', profiles);
+      console.log('Candidates data from Supabase:', candidatesData);
 
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+      if (error) {
+        console.error('Error fetching candidates:', error);
         toast({
           title: "Error",
-          description: "Failed to fetch candidate profiles: " + profilesError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Get all interview progress records  
-      const { data: allProgress, error: progressError } = await supabase
-        .from('interview_progress')
-        .select('*');
-
-      console.log('All interview progress records:', allProgress);
-
-      if (progressError) {
-        console.error('Error fetching progress:', progressError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch interview progress: " + progressError.message,
+          description: "Failed to fetch candidates: " + error.message,
           variant: "destructive"
         });
         return;
@@ -66,26 +61,24 @@ export const useCandidates = () => {
 
       const transformedCandidates: Candidate[] = [];
 
-      // Process all candidate profiles
-      if (profiles) {
-        for (const profile of profiles) {
-          // Find corresponding interview progress
-          const progress = allProgress?.find(p => p.user_id === profile.id);
+      if (candidatesData) {
+        for (const candidate of candidatesData) {
+          const progress = candidate.interview_progress?.[0]; // Get first progress record
           
-          console.log(`Processing candidate ${profile.id}:`, { profile, progress });
+          console.log(`Processing candidate ${candidate.id}:`, { candidate, progress });
           
           let submissionStatus = 'not-started';
-          let dateSubmitted = profile.created_at;
+          let dateSubmitted = candidate.created_at;
           
           if (progress) {
             submissionStatus = progress.submission_status || 'not-started';
-            dateSubmitted = progress.submitted_at || progress.created_at || profile.created_at;
+            dateSubmitted = progress.submitted_at || progress.updated_at || progress.created_at || candidate.created_at;
           }
           
           transformedCandidates.push({
-            id: profile.id,
-            name: profile.full_name,
-            email: profile.email,
+            id: candidate.id,
+            name: candidate.full_name,
+            email: candidate.email,
             submissionStatus,
             dateSubmitted,
             overallScore: null,
