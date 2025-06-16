@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -125,11 +126,13 @@ const Admin = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src="/lovable-uploads/ff59cade-15f3-4d94-80a2-7c1383242387.png" 
+                alt="MentalSpace Logo" 
+                className="h-8 w-auto"
+              />
               <div>
-                <h1 className="text-lg font-bold text-gray-900">MentalSpace Admin</h1>
+                <h1 className="text-lg font-bold text-gray-900">Admin Dashboard</h1>
                 <p className="text-sm text-gray-600">Interview Management</p>
               </div>
             </Link>

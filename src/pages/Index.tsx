@@ -13,11 +13,12 @@ const Index = () => {
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
+            <img 
+              src="/lovable-uploads/ff59cade-15f3-4d94-80a2-7c1383242387.png" 
+              alt="MentalSpace Logo" 
+              className="h-12 w-auto"
+            />
             <div>
-              <h1 className="text-xl font-bold text-gray-900">MentalSpace</h1>
               <p className="text-sm text-gray-600">Therapy & Healing Counseling</p>
             </div>
           </div>
@@ -166,10 +167,11 @@ const Index = () => {
       <footer className="bg-gray-900 text-white py-12 px-4">
         <div className="container mx-auto text-center">
           <div className="flex items-center justify-center space-x-3 mb-6">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold">MentalSpace</span>
+            <img 
+              src="/lovable-uploads/ff59cade-15f3-4d94-80a2-7c1383242387.png" 
+              alt="MentalSpace Logo" 
+              className="h-8 w-auto"
+            />
           </div>
           <p className="text-gray-400 mb-4">Transforming mental healthcare through technology</p>
           <div className="flex justify-center space-x-6 text-sm text-gray-400">

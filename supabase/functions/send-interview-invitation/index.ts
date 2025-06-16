@@ -109,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
     const interviewUrl = `${Deno.env.get('SITE_URL') || 'https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com'}/interview?token=${invitation.invitation_token}`;
 
     console.log("Sending email...");
-    // Send professional email with verified domain
+    // Send professional email with verified domain and company logo
     const emailResponse = await resend.emails.send({
       from: "MentalSpace Hiring <hiring@chctherapy.com>",
       to: [candidateEmail],
@@ -125,6 +125,7 @@ const handler = async (req: Request): Promise<Response> => {
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8fafc; }
             .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; }
+            .logo { max-width: 200px; height: auto; margin-bottom: 15px; }
             .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
             .content { padding: 40px 30px; }
             .greeting { font-size: 18px; margin-bottom: 20px; color: #1f2937; }
@@ -145,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🧠 MentalSpace</h1>
+              <img src="https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com/lovable-uploads/ff59cade-15f3-4d94-80a2-7c1383242387.png" alt="MentalSpace Logo" class="logo" />
               <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Interview Invitation</p>
             </div>
             
