@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
         
         if (!mounted) return;
@@ -49,15 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           // Load profile for authenticated user
-          await loadUserProfile(session.user.id);
+          loadUserProfile(session.user.id).finally(() => {
+            if (mounted) {
+              setLoading(false);
+            }
+          });
         } else {
           // No user, clear profile
           setProfile(null);
-        }
-        
-        // Set loading to false after handling the auth state change
-        if (mounted) {
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+          }
         }
       }
     );
