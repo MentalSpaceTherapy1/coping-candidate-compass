@@ -33,7 +33,17 @@ const CultureFit = ({ data, onDataChange }: CultureFitProps) => {
   ];
 
   useEffect(() => {
-    onDataChange("cultureQuestions", answers);
+    if (data.cultureQuestions) {
+      setAnswers(data.cultureQuestions);
+    }
+  }, [data.cultureQuestions]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onDataChange("cultureQuestions", answers);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, [answers, onDataChange]);
 
   const handleAnswerChange = (questionId: string, value: string) => {

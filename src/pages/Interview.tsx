@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, CheckCircle, Clock, ArrowLeft, ArrowRight, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useInterviewData } from "@/hooks/useInterviewData";
 import GeneralQuestions from "@/components/interview/GeneralQuestions";
 import TechnicalScenarios from "@/components/interview/TechnicalScenarios";
 import TechnicalExercises from "@/components/interview/TechnicalExercises";
@@ -14,13 +15,8 @@ import CultureFit from "@/components/interview/CultureFit";
 import ReviewSubmit from "@/components/interview/ReviewSubmit";
 
 const Interview = () => {
+  const { progress, answers, saveAnswer, updateProgress, loading } = useInterviewData();
   const [currentStep, setCurrentStep] = useState(1);
-  const [interviewData, setInterviewData] = useState({
-    generalQuestions: {},
-    technicalScenarios: {},
-    technicalExercises: {},
-    cultureQuestions: {}
-  });
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { toast } = useToast();
 
@@ -32,27 +28,34 @@ const Interview = () => {
     { id: 5, title: "Review & Submit", component: ReviewSubmit, estimatedTime: "5 min" }
   ];
 
+  // Initialize current step from progress data
+  useEffect(() => {
+    if (progress?.current_step) {
+      setCurrentStep(progress.current_step);
+    }
+  }, [progress]);
+
   const currentStepData = steps.find(step => step.id === currentStep);
-  const progress = (currentStep / steps.length) * 100;
+  const progressPercentage = (currentStep / steps.length) * 100;
 
   // Auto-save functionality
   useEffect(() => {
     const interval = setInterval(() => {
-      // Simulate auto-save
       setLastSaved(new Date());
-      console.log("Auto-saving interview progress...", interviewData);
-    }, 30000); // Auto-save every 30 seconds
+      console.log("Auto-save triggered...");
+    }, 30000); // Every 30 seconds
 
     return () => clearInterval(interval);
-  }, [interviewData]);
+  }, []);
 
-  const handleStepData = (stepName: string, data: any) => {
-    setInterviewData(prev => ({
-      ...prev,
-      [stepName]: data
-    }));
+  const handleStepData = async (stepName: string, data: any) => {
+    // Save each answer individually
+    for (const [questionKey, value] of Object.entries(data)) {
+      if (value && (typeof value === 'string' ? value.trim() : true)) {
+        await saveAnswer(stepName, questionKey, value);
+      }
+    }
     
-    // Manual save
     setLastSaved(new Date());
     toast({
       title: "Progress saved",
@@ -60,23 +63,39 @@ const Interview = () => {
     });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+      const newStep = currentStep + 1;
+      setCurrentStep(newStep);
+      await updateProgress(newStep);
     }
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = async () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+      await updateProgress(newStep);
     }
   };
 
-  const handleStepClick = (stepId: number) => {
+  const handleStepClick = async (stepId: number) => {
     setCurrentStep(stepId);
+    await updateProgress(stepId);
   };
 
   const CurrentStepComponent = currentStepData?.component;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your interview...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -113,9 +132,9 @@ const Interview = () => {
               <span className="text-sm font-medium text-gray-700">
                 Step {currentStep} of {steps.length}
               </span>
-              <span className="text-sm text-gray-500">{Math.round(progress)}% Complete</span>
+              <span className="text-sm text-gray-500">{Math.round(progressPercentage)}% Complete</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <Progress value={progressPercentage} className="h-2" />
           </div>
         </div>
       </header>
@@ -183,7 +202,7 @@ const Interview = () => {
             {/* Dynamic Step Content */}
             {CurrentStepComponent && (
               <CurrentStepComponent
-                data={interviewData}
+                data={answers}
                 onDataChange={handleStepData}
               />
             )}

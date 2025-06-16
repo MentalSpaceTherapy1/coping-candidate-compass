@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Link as LinkIcon } from "lucide-react";
 
@@ -50,7 +49,17 @@ const TechnicalScenarios = ({ data, onDataChange }: TechnicalScenariosProps) => 
   ];
 
   useEffect(() => {
-    onDataChange("technicalScenarios", answers);
+    if (data.technicalScenarios) {
+      setAnswers(data.technicalScenarios);
+    }
+  }, [data.technicalScenarios]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onDataChange("technicalScenarios", answers);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, [answers, onDataChange]);
 
   const handleAnswerChange = (scenarioId: string, field: string, value: string) => {

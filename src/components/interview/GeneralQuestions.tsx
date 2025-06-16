@@ -67,7 +67,17 @@ const GeneralQuestions = ({ data, onDataChange }: GeneralQuestionsProps) => {
   ];
 
   useEffect(() => {
-    onDataChange("generalQuestions", answers);
+    if (data.generalQuestions) {
+      setAnswers(data.generalQuestions);
+    }
+  }, [data.generalQuestions]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onDataChange("generalQuestions", answers);
+    }, 1000); // Debounce saves by 1 second
+
+    return () => clearTimeout(timeoutId);
   }, [answers, onDataChange]);
 
   const handleAnswerChange = (questionId: string, value: string) => {

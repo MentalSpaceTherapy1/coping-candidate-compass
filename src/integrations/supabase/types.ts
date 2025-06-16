@@ -50,6 +50,7 @@ export type Database = {
           file_path: string | null
           file_type: string | null
           id: string
+          updated_at: string | null
           upload_url: string | null
           user_id: string
         }
@@ -60,6 +61,7 @@ export type Database = {
           file_path?: string | null
           file_type?: string | null
           id?: string
+          updated_at?: string | null
           upload_url?: string | null
           user_id: string
         }
@@ -70,6 +72,7 @@ export type Database = {
           file_path?: string | null
           file_type?: string | null
           id?: string
+          updated_at?: string | null
           upload_url?: string | null
           user_id?: string
         }
@@ -80,6 +83,7 @@ export type Database = {
           answer: string | null
           created_at: string
           id: string
+          metadata: Json | null
           question_key: string
           section: Database["public"]["Enums"]["interview_section"]
           updated_at: string
@@ -89,6 +93,7 @@ export type Database = {
           answer?: string | null
           created_at?: string
           id?: string
+          metadata?: Json | null
           question_key: string
           section: Database["public"]["Enums"]["interview_section"]
           updated_at?: string
@@ -98,6 +103,7 @@ export type Database = {
           answer?: string | null
           created_at?: string
           id?: string
+          metadata?: Json | null
           question_key?: string
           section?: Database["public"]["Enums"]["interview_section"]
           updated_at?: string
@@ -141,6 +147,39 @@ export type Database = {
           sent_by?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      interview_progress: {
+        Row: {
+          completed_sections: Json | null
+          created_at: string | null
+          current_step: number | null
+          id: string
+          submission_status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_sections?: Json | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          submission_status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_sections?: Json | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          submission_status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
