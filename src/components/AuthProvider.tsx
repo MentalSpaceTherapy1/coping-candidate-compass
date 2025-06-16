@@ -27,13 +27,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileData) {
         console.log('Profile loaded from database:', profileData);
         setProfile(profileData);
+        return profileData;
       } else {
         console.log('No profile found in database');
         setProfile(null);
+        return null;
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
       setProfile(null);
+      return null;
     }
   };
 
@@ -49,14 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          // Use setTimeout to prevent potential deadlocks
-          setTimeout(async () => {
-            if (mounted) {
-              await loadUserProfile(session.user.id);
-            }
-          }, 100);
-        } else {
+        if (session?.user && event === 'SIGNED_IN') {
+          console.log('User signed in, loading profile...');
+          const profileData = await loadUserProfile(session.user.id);
+          if (profileData && mounted) {
+            // Force redirect after successful profile load
+            const redirectPath = profileData.role === 'admin' ? '/admin' : '/interview';
+            console.log('Redirecting to:', redirectPath);
+            window.location.href = redirectPath;
+          }
+        } else if (!session) {
           setProfile(null);
         }
         

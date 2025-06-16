@@ -23,9 +23,8 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && profile && !authLoading) {
-      // Use the actual database role from the profile
       const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
-      console.log('Redirecting logged in user to:', redirectPath, 'Database role:', profile.role);
+      console.log('Already logged in, redirecting to:', redirectPath);
       navigate(redirectPath, { replace: true });
     }
   }, [user, profile, authLoading, navigate]);
@@ -53,14 +52,19 @@ const Login = () => {
     }
 
     try {
+      console.log('Attempting to sign in...');
       const { error } = await signIn(formData.email, formData.password);
       
       if (!error) {
+        console.log('Sign in successful, waiting for redirect...');
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
-        // Navigation will be handled by useEffect after auth state changes
+        // The AuthProvider will handle the redirect
+      } else {
+        console.error('Sign in failed:', error);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -69,7 +73,6 @@ const Login = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
