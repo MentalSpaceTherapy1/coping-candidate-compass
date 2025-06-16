@@ -34,27 +34,23 @@ export const useCandidates = () => {
       console.log('Current user profile:', profile);
       console.log('User role:', profile?.role);
       
-      // Try to get all profiles first to see what we can access
-      const { data: allProfiles, error: allProfilesError } = await supabase
+      // Now with fixed RLS policies, we can directly query for candidate profiles
+      const { data: candidateProfiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .eq('role', 'candidate');
 
-      console.log('📊 All profiles query result:', { allProfiles, error: allProfilesError });
+      console.log('📊 Candidate profiles query result:', { candidateProfiles, error: profilesError });
 
-      if (allProfilesError) {
-        console.error('❌ Error fetching all profiles:', allProfilesError);
+      if (profilesError) {
+        console.error('❌ Error fetching candidate profiles:', profilesError);
         toast({
           title: "Error",
-          description: "Failed to fetch profiles: " + allProfilesError.message,
+          description: "Failed to fetch candidate profiles: " + profilesError.message,
           variant: "destructive"
         });
         return;
       }
-
-      // Filter for candidates (anyone who is not an admin)
-      const candidateProfiles = allProfiles?.filter(profile => profile.role === 'candidate') || [];
-      
-      console.log('📊 Candidate profiles found:', candidateProfiles);
 
       // Get all interview progress records
       const { data: progressRecords, error: progressError } = await supabase
