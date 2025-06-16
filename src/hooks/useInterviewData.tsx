@@ -63,7 +63,14 @@ export const useInterviewData = () => {
             : answer.section === 'technical_exercises' ? 'technicalExercises'
             : 'cultureQuestions';
           
-          answersMap[sectionKey][answer.question_key] = answer.metadata?.type === 'complex' 
+          // Safely check if metadata is an object with type property
+          const isComplexAnswer = answer.metadata && 
+            typeof answer.metadata === 'object' && 
+            answer.metadata !== null && 
+            'type' in answer.metadata && 
+            answer.metadata.type === 'complex';
+          
+          answersMap[sectionKey][answer.question_key] = isComplexAnswer && 'value' in answer.metadata
             ? answer.metadata.value 
             : answer.answer;
         });
