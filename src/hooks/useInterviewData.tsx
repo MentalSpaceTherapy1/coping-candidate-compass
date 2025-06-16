@@ -67,11 +67,12 @@ export const useInterviewData = () => {
           const isComplexAnswer = answer.metadata && 
             typeof answer.metadata === 'object' && 
             answer.metadata !== null && 
+            !Array.isArray(answer.metadata) &&
             'type' in answer.metadata && 
-            answer.metadata.type === 'complex';
+            (answer.metadata as any).type === 'complex';
           
-          answersMap[sectionKey][answer.question_key] = isComplexAnswer && 'value' in answer.metadata
-            ? answer.metadata.value 
+          answersMap[sectionKey][answer.question_key] = isComplexAnswer && 'value' in (answer.metadata as any)
+            ? (answer.metadata as any).value 
             : answer.answer;
         });
 
