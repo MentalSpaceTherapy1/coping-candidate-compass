@@ -94,24 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      console.log('=== STARTING SIGN UP PROCESS ===');
-      console.log('Email:', email);
-      console.log('Full name being sent:', fullName);
-      console.log('Password length:', password.length);
+      console.log('Starting sign up process for:', email);
       
       const redirectUrl = `${window.location.origin}/`;
-      console.log('Redirect URL:', redirectUrl);
       
-      // Test database connection first
-      console.log('Testing database connection...');
-      const { data: testData, error: testError } = await supabase
-        .from('profiles')
-        .select('count')
-        .limit(1);
-      
-      console.log('Database test result:', { testData, testError });
-      
-      console.log('Attempting Supabase signUp...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -123,27 +109,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      console.log('=== SIGN UP RESPONSE ===');
-      console.log('Full response data:', data);
-      console.log('User object:', data?.user);
-      console.log('Session object:', data?.session);
-      console.log('Error object:', error);
+      console.log('Sign up response:', { data, error });
       
       if (error) {
-        console.error('=== SIGN UP ERROR DETAILS ===');
-        console.error('Error message:', error.message);
-        console.error('Error status:', error.status);
-        console.error('Error code:', error.code);
-        console.error('Full error object:', error);
-        
+        console.error('Sign up error:', error);
         toast({
           title: "Sign up failed",
           description: error.message,
           variant: "destructive"
         });
       } else {
-        console.log('=== SIGN UP SUCCESS ===');
-        console.log('Sign up successful, showing success toast');
+        console.log('Sign up successful');
         toast({
           title: "Success!",
           description: "Please check your email to confirm your account.",
@@ -152,10 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { error };
     } catch (error: any) {
-      console.error('=== SIGN UP CATCH ERROR ===');
-      console.error('Catch error:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error constructor:', error.constructor?.name);
+      console.error('Sign up catch error:', error);
       return { error };
     }
   };
