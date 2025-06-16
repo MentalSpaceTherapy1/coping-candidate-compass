@@ -29,56 +29,72 @@ export const useCandidates = () => {
       
       console.log('Fetching all candidates...');
       
-      // Get all candidate profiles with their interview progress in one query
-      const { data: candidatesData, error } = await supabase
+      // First, let's get all profiles with role 'candidate'
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          full_name,
-          email,
-          role,
-          created_at,
-          interview_progress (
-            submission_status,
-            submitted_at,
-            created_at,
-            updated_at
-          )
-        `)
+        .select('*')
         .eq('role', 'candidate');
 
-      console.log('Candidates data from Supabase:', candidatesData);
+      console.log('Candidate profiles from Supabase:', profiles);
 
-      if (error) {
-        console.error('Error fetching candidates:', error);
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
         toast({
           title: "Error",
-          description: "Failed to fetch candidates: " + error.message,
+          description: "Failed to fetch candidate profiles: " + profilesError.message,
           variant: "destructive"
         });
         return;
       }
 
+      // If no profiles found, let's check if there are any profiles at all
+      if (!profiles || profiles.length === 0) {
+        console.log('No candidate profiles found. Checking all profiles...');
+        
+        const { data: allProfiles, error: allProfilesError } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        console.log('All profiles in database:', allProfiles);
+        
+        if (allProfilesError) {
+          console.error('Error fetching all profiles:', allProfilesError);
+        }
+      }
+
+      // Get all interview progress records
+      const { data: progressRecords, error: progressError } = await supabase
+        .from('interview_progress')
+        .select('*');
+
+      console.log('Interview progress records:', progressRecords);
+
+      if (progressError) {
+        console.error('Error fetching interview progress:', progressError);
+        // Don't return here, continue without progress data
+      }
+
       const transformedCandidates: Candidate[] = [];
 
-      if (candidatesData) {
-        for (const candidate of candidatesData) {
-          const progress = candidate.interview_progress?.[0]; // Get first progress record
+      if (profiles) {
+        for (const profile of profiles) {
+          // Find the progress record for this candidate
+          const progress = progressRecords?.find(p => p.user_id === profile.id);
           
-          console.log(`Processing candidate ${candidate.id}:`, { candidate, progress });
+          console.log(`Processing candidate ${profile.id} (${profile.full_name}):`, { profile, progress });
           
           let submissionStatus = 'not-started';
-          let dateSubmitted = candidate.created_at;
+          let dateSubmitted = profile.created_at;
           
           if (progress) {
             submissionStatus = progress.submission_status || 'not-started';
-            dateSubmitted = progress.submitted_at || progress.updated_at || progress.created_at || candidate.created_at;
+            dateSubmitted = progress.submitted_at || progress.updated_at || progress.created_at || profile.created_at;
           }
           
           transformedCandidates.push({
-            id: candidate.id,
-            name: candidate.full_name,
-            email: candidate.email,
+            id: profile.id,
+            name: profile.full_name || profile.email,
+            email: profile.email,
             submissionStatus,
             dateSubmitted,
             overallScore: null,
@@ -94,6 +110,23 @@ export const useCandidates = () => {
 
       console.log('Final transformed candidates:', transformedCandidates);
       setCandidates(transformedCandidates);
+      
+      // If we still have no candidates, let's check the invitations table
+      if (transformedCandidates.length === 0) {
+        console.log('No candidates found, checking invitations...');
+        
+        const { data: invitations, error: invitationsError } = await supabase
+          .from('interview_invitations')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        console.log('Interview invitations:', invitations);
+        
+        if (invitationsError) {
+          console.error('Error fetching invitations:', invitationsError);
+        }
+      }
+      
     } catch (error) {
       console.error('Error in fetchCandidates:', error);
       toast({
