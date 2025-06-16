@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Interview from "./pages/Interview";
 import Admin from "./pages/Admin";
+import CandidateReview from "./pages/CandidateReview";
 import ThankYou from "./pages/ThankYou";
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +36,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute requiredRole="admin">
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/candidate/:candidateId" element={
+              <ProtectedRoute requiredRole="admin">
+                <CandidateReview />
               </ProtectedRoute>
             } />
             <Route path="/thank-you" element={
