@@ -13,16 +13,21 @@ const corsHeaders = {
 
 interface InvitationRequest {
   candidateEmail: string;
-  candidateName: string;
+  candidateName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("Function called with method:", req.method);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+      status: 405, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   }
 
   try {
@@ -31,6 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('No authorization header');
     }
 
+    console.log("Creating Supabase client...");
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -42,12 +48,15 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     // Get the authenticated user
+    console.log("Getting authenticated user...");
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
+      console.error("Auth error:", authError);
       throw new Error('Unauthorized');
     }
 
     // Check if user is admin
+    console.log("Checking user role for:", user.id);
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('role')
@@ -55,29 +64,51 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (profileError || profile?.role !== 'admin') {
+      console.error("Profile error or insufficient permissions:", profileError, profile);
       throw new Error('Insufficient permissions');
     }
 
-    const { candidateEmail, candidateName }: InvitationRequest = await req.json();
+    console.log("Parsing request body...");
+    const body = await req.text();
+    console.log("Request body:", body);
+    
+    let requestData: InvitationRequest;
+    try {
+      requestData = JSON.parse(body);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      throw new Error('Invalid JSON in request body');
+    }
 
+    const { candidateEmail, candidateName } = requestData;
+
+    if (!candidateEmail) {
+      throw new Error('Candidate email is required');
+    }
+
+    console.log("Creating invitation record...");
     // Create invitation record
     const { data: invitation, error: insertError } = await supabaseClient
       .from('interview_invitations')
       .insert({
         candidate_email: candidateEmail,
-        candidate_name: candidateName,
+        candidate_name: candidateName || null,
         sent_by: user.id,
       })
       .select()
       .single();
 
     if (insertError) {
+      console.error("Insert error:", insertError);
       throw new Error(`Failed to create invitation: ${insertError.message}`);
     }
 
-    // Generate interview link with token
-    const interviewUrl = `${Deno.env.get('SITE_URL') || 'http://localhost:3000'}/interview?token=${invitation.invitation_token}`;
+    console.log("Invitation created:", invitation);
 
+    // Generate interview link with token
+    const interviewUrl = `${Deno.env.get('SITE_URL') || 'https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com'}/interview?token=${invitation.invitation_token}`;
+
+    console.log("Sending email...");
     // Send email
     const emailResponse = await resend.emails.send({
       from: "MentalSpace <onboarding@resend.dev>",
@@ -122,10 +153,11 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (emailResponse.error) {
+      console.error("Email error:", emailResponse.error);
       throw new Error(`Failed to send email: ${emailResponse.error.message}`);
     }
 
-    console.log("Interview invitation sent successfully:", emailResponse);
+    console.log("Email sent successfully:", emailResponse);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -141,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-interview-invitation function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "An unexpected error occurred" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
