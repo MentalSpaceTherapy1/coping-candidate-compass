@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,85 +9,101 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Users, Search, Filter, Download, Eye, Star, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { InviteCandidate } from "@/components/InviteCandidate";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Candidate {
+  id: string;
+  name: string;
+  email: string;
+  submissionStatus: string;
+  dateSubmitted: string;
+  overallScore: number | null;
+  sections: {
+    general: number | null;
+    technical: number | null;
+    exercises: number | null;
+    culture: number | null;
+  };
+}
 
 const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date");
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Mock candidate data
-  const candidates = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      email: "sarah.j@email.com",
-      submissionStatus: "completed",
-      dateSubmitted: "2024-01-15",
-      overallScore: 4.2,
-      sections: {
-        general: 4.5,
-        technical: 4.0,
-        exercises: 4.1,
-        culture: 4.2
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
+
+  const fetchCandidates = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch profiles with interview progress
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          created_at,
+          interview_progress (
+            submission_status,
+            submitted_at,
+            current_step,
+            completed_sections
+          )
+        `)
+        .eq('role', 'candidate');
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch candidate data",
+          variant: "destructive"
+        });
+        return;
       }
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      email: "m.chen@email.com",
-      submissionStatus: "in-progress",
-      dateSubmitted: "2024-01-14",
-      overallScore: null,
-      sections: {
-        general: null,
-        technical: null,
-        exercises: null,
-        culture: null
-      }
-    },
-    {
-      id: 3,
-      name: "Emily Rodriguez",
-      email: "emily.r@email.com",
-      submissionStatus: "completed",
-      dateSubmitted: "2024-01-13",
-      overallScore: 3.8,
-      sections: {
-        general: 4.0,
-        technical: 3.5,
-        exercises: 3.8,
-        culture: 4.0
-      }
-    },
-    {
-      id: 4,
-      name: "David Kim",
-      email: "d.kim@email.com",
-      submissionStatus: "completed",
-      dateSubmitted: "2024-01-12",
-      overallScore: 4.7,
-      sections: {
-        general: 4.8,
-        technical: 4.5,
-        exercises: 4.9,
-        culture: 4.6
-      }
-    },
-    {
-      id: 5,
-      name: "Lisa Thompson",
-      email: "lisa.t@email.com",
-      submissionStatus: "draft",
-      dateSubmitted: "2024-01-11",
-      overallScore: null,
-      sections: {
-        general: null,
-        technical: null,
-        exercises: null,
-        culture: null
-      }
+
+      // Transform data to match the expected format
+      const transformedCandidates: Candidate[] = (profiles || []).map(profile => {
+        const progress = Array.isArray(profile.interview_progress) 
+          ? profile.interview_progress[0] 
+          : profile.interview_progress;
+        
+        return {
+          id: profile.id,
+          name: profile.full_name,
+          email: profile.email,
+          submissionStatus: progress?.submission_status || 'draft',
+          dateSubmitted: progress?.submitted_at || profile.created_at,
+          overallScore: null, // We'll calculate this separately if needed
+          sections: {
+            general: null,
+            technical: null,
+            exercises: null,
+            culture: null
+          }
+        };
+      });
+
+      setCandidates(transformedCandidates);
+    } catch (error) {
+      console.error('Error in fetchCandidates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch candidate data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -118,6 +134,39 @@ const Admin = () => {
     const matchesStatus = statusFilter === "all" || candidate.submissionStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const completedCount = candidates.filter(c => c.submissionStatus === "completed").length;
+  const inProgressCount = candidates.filter(c => c.submissionStatus === "in-progress").length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Link to="/" className="flex items-center space-x-3">
+                <img 
+                  src="/lovable-uploads/ff59cade-15f3-4d94-80a2-7c1383242387.png" 
+                  alt="MentalSpace Logo" 
+                  className="h-8 w-auto"
+                />
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">Admin Dashboard</h1>
+                  <p className="text-sm text-gray-600">Interview Management</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </header>
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading candidate data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -171,9 +220,7 @@ const Admin = () => {
               <div className="flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-green-600" />
                 <div>
-                  <div className="text-2xl font-bold">
-                    {candidates.filter(c => c.submissionStatus === "completed").length}
-                  </div>
+                  <div className="text-2xl font-bold">{completedCount}</div>
                   <p className="text-sm text-gray-600">Completed</p>
                 </div>
               </div>
@@ -185,7 +232,7 @@ const Admin = () => {
               <div className="flex items-center space-x-2">
                 <Star className="w-5 h-5 text-yellow-600" />
                 <div>
-                  <div className="text-2xl font-bold">4.2</div>
+                  <div className="text-2xl font-bold">-</div>
                   <p className="text-sm text-gray-600">Avg Score</p>
                 </div>
               </div>
@@ -197,9 +244,7 @@ const Admin = () => {
               <div className="flex items-center space-x-2">
                 <Eye className="w-5 h-5 text-purple-600" />
                 <div>
-                  <div className="text-2xl font-bold">
-                    {candidates.filter(c => c.submissionStatus === "in-progress").length}
-                  </div>
+                  <div className="text-2xl font-bold">{inProgressCount}</div>
                   <p className="text-sm text-gray-600">In Progress</p>
                 </div>
               </div>
@@ -257,67 +302,76 @@ const Admin = () => {
         {/* Candidates Table */}
         <Card>
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Candidate</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Overall Score</TableHead>
-                  <TableHead>Section Scores</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCandidates.map((candidate) => (
-                  <TableRow key={candidate.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{candidate.name}</div>
-                        <div className="text-sm text-gray-500">{candidate.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(candidate.submissionStatus)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {new Date(candidate.dateSubmitted).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getScoreDisplay(candidate.overallScore)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        {Object.entries(candidate.sections).map(([key, score]) => (
-                          <div key={key} className="text-xs">
-                            <div className="font-medium capitalize">{key.substring(0, 3)}</div>
-                            <div className="text-gray-500">
-                              {score ? score.toFixed(1) : '-'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Link to={`/admin/candidate/${candidate.id}`}>
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4 mr-1" />
-                            Review
-                          </Button>
-                        </Link>
-                        <Button size="sm" variant="outline">
-                          <Download className="w-4 h-4 mr-1" />
-                          Export
-                        </Button>
-                      </div>
-                    </TableCell>
+            {candidates.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No candidates yet</h3>
+                <p className="text-gray-600 mb-4">Invite candidates to start seeing them here.</p>
+                <InviteCandidate />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidate</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Overall Score</TableHead>
+                    <TableHead>Section Scores</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredCandidates.map((candidate) => (
+                    <TableRow key={candidate.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{candidate.name}</div>
+                          <div className="text-sm text-gray-500">{candidate.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(candidate.submissionStatus)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(candidate.dateSubmitted).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getScoreDisplay(candidate.overallScore)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          {Object.entries(candidate.sections).map(([key, score]) => (
+                            <div key={key} className="text-xs">
+                              <div className="font-medium capitalize">{key.substring(0, 3)}</div>
+                              <div className="text-gray-500">
+                                {score ? score.toFixed(1) : '-'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Link to={`/admin/candidate/${candidate.id}`}>
+                            <Button size="sm" variant="outline">
+                              <Eye className="w-4 h-4 mr-1" />
+                              Review
+                            </Button>
+                          </Link>
+                          <Button size="sm" variant="outline">
+                            <Download className="w-4 h-4 mr-1" />
+                            Export
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
