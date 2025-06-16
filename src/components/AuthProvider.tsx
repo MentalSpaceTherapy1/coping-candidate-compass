@@ -49,23 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           // Load profile for authenticated user
-          setTimeout(async () => {
-            if (mounted) {
-              await loadUserProfile(session.user.id);
-              if (mounted) {
-                setLoading(false);
-              }
-            }
-          }, 0);
+          await loadUserProfile(session.user.id);
         } else {
-          // No user, clear profile and stop loading
+          // No user, clear profile
           setProfile(null);
+        }
+        
+        // Set loading to false after handling the auth state change
+        if (mounted) {
           setLoading(false);
         }
       }
     );
 
-    // Check for existing session
+    // Check for existing session on mount
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -78,6 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           await loadUserProfile(session.user.id);
+        } else {
+          setProfile(null);
         }
         
         if (mounted) {
