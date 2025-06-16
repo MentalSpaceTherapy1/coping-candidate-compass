@@ -31,9 +31,6 @@ export const signUpUser = async (email: string, password: string, fullName: stri
     
     const redirectUrl = `${window.location.origin}/`;
     
-    // Determine role based on email
-    const isAdmin = email.includes('admin');
-    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -41,7 +38,7 @@ export const signUpUser = async (email: string, password: string, fullName: stri
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
-          role: isAdmin ? 'admin' : 'candidate'
+          role: 'candidate' // Default to candidate, admin role should be set manually in database
         }
       }
     });
@@ -95,8 +92,9 @@ export const updateUserProfile = async (userId: string, updates: Partial<Profile
   }
 };
 
-// Helper function to get user role from metadata
+// Helper function to get user role - now checks database instead of metadata
 export const getUserRoleFromMetadata = (user: any): 'candidate' | 'admin' => {
+  // This is now just a fallback - the real role should come from the database profile
   const role = user?.user_metadata?.role || user?.app_metadata?.role;
   return role === 'admin' ? 'admin' : 'candidate';
 };

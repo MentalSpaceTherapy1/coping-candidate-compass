@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserRoleFromMetadata } from "@/services/authService";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -23,11 +21,10 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      // Use profile role if available, otherwise fallback to user metadata
-      const userRole = profile?.role || getUserRoleFromMetadata(user);
-      const redirectPath = userRole === 'admin' ? '/admin' : '/interview';
-      console.log('Redirecting logged in user to:', redirectPath, 'Role:', userRole);
+    if (user && profile) {
+      // Use the actual database role from the profile
+      const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
+      console.log('Redirecting logged in user to:', redirectPath, 'Database role:', profile.role);
       navigate(redirectPath, { replace: true });
     }
   }, [user, profile, navigate]);
@@ -149,7 +146,7 @@ const Login = () => {
 
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-700">
-                <strong>Demo:</strong> Use email with "admin" for admin access, or register as a candidate.
+                <strong>Demo:</strong> Use ejoseph@chctherapy.com (admin) or register as a candidate.
               </p>
             </div>
           </CardContent>
