@@ -1,139 +1,23 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AdminStats } from "@/components/admin/AdminStats";
 import { AdminFilters } from "@/components/admin/AdminFilters";
 import { CandidateTable } from "@/components/admin/CandidateTable";
 import { EmptyState } from "@/components/admin/EmptyState";
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  submissionStatus: string;
-  dateSubmitted: string;
-  overallScore: number | null;
-  sections: {
-    general: number | null;
-    technical: number | null;
-    exercises: number | null;
-    culture: number | null;
-  };
-}
+import { useCandidates } from "@/hooks/useCandidates";
+import { filterCandidates, getCandidateStats } from "@/utils/candidateFilters";
 
 const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date");
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchCandidates();
-  }, []);
-
-  const fetchCandidates = async () => {
-    try {
-      setLoading(true);
-      
-      console.log('Fetching candidates...');
-      
-      // Get all profiles (now guaranteed to exist for all users)
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'candidate'); // Only get candidates, not admins
-
-      console.log('Candidate profiles:', profiles);
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch candidate profiles: " + profilesError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Get all interview progress records  
-      const { data: allProgress, error: progressError } = await supabase
-        .from('interview_progress')
-        .select('*');
-
-      console.log('All interview progress records:', allProgress);
-
-      if (progressError) {
-        console.error('Error fetching progress:', progressError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch interview progress: " + progressError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const transformedCandidates: Candidate[] = [];
-
-      // Process all candidate profiles
-      if (profiles) {
-        for (const profile of profiles) {
-          // Find corresponding interview progress
-          const progress = allProgress?.find(p => p.user_id === profile.id);
-          
-          console.log(`Processing candidate ${profile.id}:`, { profile, progress });
-          
-          let submissionStatus = 'not-started';
-          let dateSubmitted = profile.created_at;
-          
-          if (progress) {
-            submissionStatus = progress.submission_status || 'not-started';
-            dateSubmitted = progress.submitted_at || progress.created_at || profile.created_at;
-          }
-          
-          transformedCandidates.push({
-            id: profile.id,
-            name: profile.full_name,
-            email: profile.email,
-            submissionStatus,
-            dateSubmitted,
-            overallScore: null,
-            sections: {
-              general: null,
-              technical: null,
-              exercises: null,
-              culture: null
-            }
-          });
-        }
-      }
-
-      console.log('Final transformed candidates:', transformedCandidates);
-      setCandidates(transformedCandidates);
-    } catch (error) {
-      console.error('Error in fetchCandidates:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch candidate data",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || candidate.submissionStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const completedCount = candidates.filter(c => c.submissionStatus === "completed").length;
-  const inProgressCount = candidates.filter(c => c.submissionStatus === "in-progress").length;
+  
+  const { candidates, loading } = useCandidates();
+  
+  const filteredCandidates = filterCandidates(candidates, searchTerm, statusFilter);
+  const stats = getCandidateStats(candidates);
 
   if (loading) {
     return (
@@ -155,9 +39,9 @@ const Admin = () => {
 
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <AdminStats 
-          totalCandidates={candidates.length}
-          completedCount={completedCount}
-          inProgressCount={inProgressCount}
+          totalCandidates={stats.totalCandidates}
+          completedCount={stats.completedCount}
+          inProgressCount={stats.inProgressCount}
         />
 
         <AdminFilters
