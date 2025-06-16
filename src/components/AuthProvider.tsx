@@ -21,28 +21,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const loadUserProfile = async (userId: string) => {
-    console.log('Loading profile for user:', userId);
-    const profileData = await fetchUserProfile(userId);
-    if (profileData) {
-      console.log('Profile loaded from database:', profileData);
-      setProfile(profileData);
-    } else {
-      console.log('No profile found in database, user may need to be set up');
-      // Don't create fallback - let the user know they need proper setup
+    try {
+      console.log('Loading profile for user:', userId);
+      const profileData = await fetchUserProfile(userId);
+      if (profileData) {
+        console.log('Profile loaded from database:', profileData);
+        setProfile(profileData);
+      } else {
+        console.log('No profile found in database');
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
       setProfile(null);
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Load profile from database - don't use setTimeout
           await loadUserProfile(session.user.id);
         } else {
           setProfile(null);
@@ -54,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      
       console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
@@ -64,7 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
