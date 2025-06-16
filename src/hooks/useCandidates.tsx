@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Candidate {
   id: string;
@@ -22,12 +23,16 @@ export const useCandidates = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user, profile } = useAuth();
 
   const fetchCandidates = async () => {
     try {
       setLoading(true);
       
-      console.log('Fetching all candidates...');
+      console.log('🔍 Fetching candidates...');
+      console.log('Current user:', user?.id);
+      console.log('Current user profile:', profile);
+      console.log('User role:', profile?.role);
       
       // First, let's get all profiles with role 'candidate'
       const { data: profiles, error: profilesError } = await supabase
@@ -35,10 +40,10 @@ export const useCandidates = () => {
         .select('*')
         .eq('role', 'candidate');
 
-      console.log('Candidate profiles from Supabase:', profiles);
+      console.log('📊 Profiles query result:', { profiles, error: profilesError });
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+        console.error('❌ Error fetching profiles:', profilesError);
         toast({
           title: "Error",
           description: "Failed to fetch candidate profiles: " + profilesError.message,
@@ -47,41 +52,35 @@ export const useCandidates = () => {
         return;
       }
 
-      // If no profiles found, let's check if there are any profiles at all
-      if (!profiles || profiles.length === 0) {
-        console.log('No candidate profiles found. Checking all profiles...');
-        
-        const { data: allProfiles, error: allProfilesError } = await supabase
-          .from('profiles')
-          .select('*');
-          
-        console.log('All profiles in database:', allProfiles);
-        
-        if (allProfilesError) {
-          console.error('Error fetching all profiles:', allProfilesError);
-        }
-      }
+      // Also try to fetch ALL profiles to see what we can access
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      console.log('📊 All profiles query result:', { allProfiles, error: allProfilesError });
 
       // Get all interview progress records
       const { data: progressRecords, error: progressError } = await supabase
         .from('interview_progress')
         .select('*');
 
-      console.log('Interview progress records:', progressRecords);
+      console.log('📊 Interview progress records:', { progressRecords, error: progressError });
 
       if (progressError) {
-        console.error('Error fetching interview progress:', progressError);
+        console.error('❌ Error fetching interview progress:', progressError);
         // Don't return here, continue without progress data
       }
 
       const transformedCandidates: Candidate[] = [];
 
-      if (profiles) {
+      if (profiles && profiles.length > 0) {
+        console.log(`✅ Found ${profiles.length} candidate profiles`);
+        
         for (const profile of profiles) {
           // Find the progress record for this candidate
           const progress = progressRecords?.find(p => p.user_id === profile.id);
           
-          console.log(`Processing candidate ${profile.id} (${profile.full_name}):`, { profile, progress });
+          console.log(`🔍 Processing candidate ${profile.id} (${profile.full_name}):`, { profile, progress });
           
           let submissionStatus = 'not-started';
           let dateSubmitted = profile.created_at;
@@ -106,29 +105,15 @@ export const useCandidates = () => {
             }
           });
         }
+      } else {
+        console.log('⚠️ No candidate profiles found');
       }
 
-      console.log('Final transformed candidates:', transformedCandidates);
+      console.log('✅ Final transformed candidates:', transformedCandidates);
       setCandidates(transformedCandidates);
       
-      // If we still have no candidates, let's check the invitations table
-      if (transformedCandidates.length === 0) {
-        console.log('No candidates found, checking invitations...');
-        
-        const { data: invitations, error: invitationsError } = await supabase
-          .from('interview_invitations')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        console.log('Interview invitations:', invitations);
-        
-        if (invitationsError) {
-          console.error('Error fetching invitations:', invitationsError);
-        }
-      }
-      
     } catch (error) {
-      console.error('Error in fetchCandidates:', error);
+      console.error('💥 Unexpected error in fetchCandidates:', error);
       toast({
         title: "Error",
         description: "Failed to fetch candidate data",
@@ -140,8 +125,15 @@ export const useCandidates = () => {
   };
 
   useEffect(() => {
-    fetchCandidates();
-  }, []);
+    // Only fetch if user is logged in and is admin
+    if (user && profile?.role === 'admin') {
+      console.log('🚀 User is admin, fetching candidates...');
+      fetchCandidates();
+    } else {
+      console.log('❌ User not admin or not logged in', { user: !!user, role: profile?.role });
+      setLoading(false);
+    }
+  }, [user, profile]);
 
   return {
     candidates,
