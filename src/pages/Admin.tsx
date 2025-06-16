@@ -41,81 +41,109 @@ const Admin = () => {
       
       console.log('Fetching candidates...');
       
-      // First, let's check all profiles to see what we have
-      const { data: allProfiles, error: allProfilesError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      console.log('All profiles in database:', allProfiles);
-      console.log('All profiles error:', allProfilesError);
-
-      // Now fetch only candidates
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          full_name,
-          created_at,
-          role,
-          interview_progress (
-            submission_status,
-            submitted_at,
-            current_step,
-            completed_sections
-          )
-        `);
-
-      console.log('Query for all profiles (no role filter):', profiles);
-      console.log('Profile query error:', profilesError);
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch candidate data: " + profilesError.message,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Filter candidates in JavaScript if needed
-      const candidateProfiles = (profiles || []).filter(profile => profile.role === 'candidate');
-      console.log('Filtered candidate profiles:', candidateProfiles);
-
-      // Also fetch all interview progress to see what's there
+      // First, get all interview progress records
       const { data: allProgress, error: progressError } = await supabase
         .from('interview_progress')
         .select('*');
 
       console.log('All interview progress records:', allProgress);
-      console.log('Progress error:', progressError);
 
-      // Transform data to match the expected format
-      const transformedCandidates: Candidate[] = candidateProfiles.map(profile => {
-        const progress = Array.isArray(profile.interview_progress) 
-          ? profile.interview_progress[0] 
-          : profile.interview_progress;
-        
-        console.log(`Processing profile ${profile.full_name}:`, { profile, progress });
-        
-        return {
-          id: profile.id,
-          name: profile.full_name || 'Unknown',
-          email: profile.email,
-          submissionStatus: progress?.submission_status || 'draft',
-          dateSubmitted: progress?.submitted_at || profile.created_at,
-          overallScore: null, // We'll calculate this separately if needed
-          sections: {
-            general: null,
-            technical: null,
-            exercises: null,
-            culture: null
+      if (progressError) {
+        console.error('Error fetching progress:', progressError);
+      }
+
+      // Now get all profiles
+      const { data: allProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      console.log('All profiles:', allProfiles);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch profiles: " + profilesError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create candidates from interview progress data
+      const transformedCandidates: Candidate[] = [];
+
+      // Process interview progress records
+      if (allProgress) {
+        for (const progress of allProgress) {
+          // Find corresponding profile
+          const profile = allProfiles?.find(p => p.id === progress.user_id);
+          
+          console.log(`Processing progress for user ${progress.user_id}:`, { progress, profile });
+          
+          if (profile) {
+            // Only include if user has candidate role OR if they have interview progress (they might be a candidate without proper role)
+            transformedCandidates.push({
+              id: profile.id,
+              name: profile.full_name || 'Unknown',
+              email: profile.email,
+              submissionStatus: progress.submission_status || 'draft',
+              dateSubmitted: progress.submitted_at || progress.created_at,
+              overallScore: null,
+              sections: {
+                general: null,
+                technical: null,
+                exercises: null,
+                culture: null
+              }
+            });
+          } else {
+            // Progress without profile - this indicates orphaned data
+            console.warn(`Found interview progress for user ${progress.user_id} but no corresponding profile`);
+            
+            // Create a placeholder candidate entry
+            transformedCandidates.push({
+              id: progress.user_id,
+              name: 'Unknown User (No Profile)',
+              email: 'unknown@email.com',
+              submissionStatus: progress.submission_status || 'draft',
+              dateSubmitted: progress.submitted_at || progress.created_at,
+              overallScore: null,
+              sections: {
+                general: null,
+                technical: null,
+                exercises: null,
+                culture: null
+              }
+            });
           }
-        };
-      });
+        }
+      }
 
-      console.log('Transformed candidates:', transformedCandidates);
+      // Also check for candidate profiles without interview progress
+      if (allProfiles) {
+        const candidateProfiles = allProfiles.filter(p => p.role === 'candidate');
+        for (const profile of candidateProfiles) {
+          // Only add if not already added from progress
+          if (!transformedCandidates.find(c => c.id === profile.id)) {
+            transformedCandidates.push({
+              id: profile.id,
+              name: profile.full_name || 'Unknown',
+              email: profile.email,
+              submissionStatus: 'not-started',
+              dateSubmitted: profile.created_at,
+              overallScore: null,
+              sections: {
+                general: null,
+                technical: null,
+                exercises: null,
+                culture: null
+              }
+            });
+          }
+        }
+      }
+
+      console.log('Final transformed candidates:', transformedCandidates);
       setCandidates(transformedCandidates);
     } catch (error) {
       console.error('Error in fetchCandidates:', error);
