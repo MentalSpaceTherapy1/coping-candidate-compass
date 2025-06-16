@@ -105,6 +105,45 @@ export type Database = {
         }
         Relationships: []
       }
+      interview_invitations: {
+        Row: {
+          candidate_email: string
+          candidate_name: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          invitation_token: string
+          sent_at: string
+          sent_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_email: string
+          candidate_name?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          sent_at?: string
+          sent_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_email?: string
+          candidate_name?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          sent_at?: string
+          sent_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

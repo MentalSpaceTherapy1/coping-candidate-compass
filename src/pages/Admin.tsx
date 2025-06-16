@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, Search, Filter, Download, Eye, Star, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { InviteCandidate } from "@/components/InviteCandidate";
 
 const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -135,6 +135,7 @@ const Admin = () => {
             </Link>
             
             <div className="flex items-center space-x-4">
+              <InviteCandidate />
               <Button variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export All
