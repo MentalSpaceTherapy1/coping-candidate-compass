@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,13 +24,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Loading profile for user:', userId);
       const profileData = await fetchUserProfile(userId);
+      console.log('Profile response:', profileData);
+      
       if (profileData) {
-        console.log('Profile loaded from database:', profileData);
+        console.log('Profile loaded successfully:', profileData);
         setProfile(profileData);
         return profileData;
       } else {
-        console.log('No profile found in database');
-        setProfile(null);
+        console.log('No profile found, creating default candidate profile');
+        // For existing users without profiles, set a default
+        setProfile({
+          id: userId,
+          email: session?.user?.email || '',
+          full_name: session?.user?.email || '',
+          role: 'candidate',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
         return null;
       }
     } catch (error) {
@@ -41,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let profileLoadTimeout: NodeJS.Timeout | null = null;
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -53,15 +65,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           console.log('User authenticated, loading profile...');
-          const profileData = await loadUserProfile(session.user.id);
-          if (profileData && mounted) {
-            // Redirect based on role
-            const redirectPath = profileData.role === 'admin' ? '/admin' : '/interview';
-            console.log('Profile loaded, redirecting to:', redirectPath);
+          
+          // Clear any existing timeout
+          if (profileLoadTimeout) {
+            clearTimeout(profileLoadTimeout);
+          }
+          
+          // Set a timeout to prevent infinite loading
+          profileLoadTimeout = setTimeout(() => {
+            console.log('Profile loading timeout, proceeding anyway');
+            if (mounted) {
+              const redirectPath = '/interview'; // Default to interview page
+              console.log('Timeout reached, redirecting to:', redirectPath);
+              if (window.location.pathname === '/login') {
+                window.location.href = redirectPath;
+              }
+            }
+          }, 5000);
+          
+          try {
+            const profileData = await loadUserProfile(session.user.id);
             
-            // Only redirect if we're currently on the login page
-            if (window.location.pathname === '/login') {
-              window.location.href = redirectPath;
+            // Clear timeout if profile loaded successfully
+            if (profileLoadTimeout) {
+              clearTimeout(profileLoadTimeout);
+              profileLoadTimeout = null;
+            }
+            
+            if (mounted) {
+              // Determine redirect path
+              const redirectPath = profileData?.role === 'admin' ? '/admin' : '/interview';
+              console.log('Profile loaded, redirecting to:', redirectPath);
+              
+              // Only redirect if we're currently on the login page
+              if (window.location.pathname === '/login') {
+                setTimeout(() => {
+                  window.location.href = redirectPath;
+                }, 100);
+              }
+            }
+          } catch (error) {
+            console.error('Profile loading failed:', error);
+            if (profileLoadTimeout) {
+              clearTimeout(profileLoadTimeout);
+            }
+            
+            if (mounted && window.location.pathname === '/login') {
+              // Fallback redirect on error
+              setTimeout(() => {
+                window.location.href = '/interview';
+              }, 100);
             }
           }
         } else {
@@ -88,6 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      if (profileLoadTimeout) {
+        clearTimeout(profileLoadTimeout);
+      }
       subscription.unsubscribe();
     };
   }, []);

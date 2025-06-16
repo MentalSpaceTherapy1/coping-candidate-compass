@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/auth';
 
@@ -13,15 +12,15 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching profile:', error);
-      return null;
+      console.error('Supabase error fetching profile:', error);
+      throw error;
     }
 
-    console.log('Profile fetched:', data);
+    console.log('Profile fetch result:', data);
     return data;
   } catch (error) {
     console.error('Error in fetchUserProfile:', error);
-    return null;
+    throw error;
   }
 };
 
