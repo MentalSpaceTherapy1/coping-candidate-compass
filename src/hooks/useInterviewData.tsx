@@ -3,24 +3,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-interface InterviewAnswer {
-  id: string;
-  question_key: string;
-  answer: string | null;
-  section: 'general' | 'technical_scenarios' | 'technical_exercises' | 'culture';
-  metadata?: any;
-  created_at: string;
-  updated_at: string;
-}
-
-interface InterviewProgress {
-  id: string;
-  current_step: number;
-  completed_sections: any;
-  submission_status: 'draft' | 'in-progress' | 'completed';
-  submitted_at: string | null;
-}
+type InterviewAnswer = Database['public']['Tables']['interview_answers']['Row'];
+type InterviewProgress = Database['public']['Tables']['interview_progress']['Row'];
+type InterviewSection = Database['public']['Enums']['interview_section'];
 
 export const useInterviewData = () => {
   const { user } = useAuth();
@@ -94,14 +81,14 @@ export const useInterviewData = () => {
     if (!user) return;
 
     try {
-      const sectionMapping = {
+      const sectionMapping: Record<string, InterviewSection> = {
         'generalQuestions': 'general',
         'technicalScenarios': 'technical_scenarios',
         'technicalExercises': 'technical_exercises',
         'cultureQuestions': 'culture'
       };
 
-      const dbSection = sectionMapping[section as keyof typeof sectionMapping];
+      const dbSection = sectionMapping[section];
       
       const answerData = {
         user_id: user.id,
@@ -147,7 +134,7 @@ export const useInterviewData = () => {
         user_id: user.id,
         current_step: step,
         completed_sections: completedSections || progress?.completed_sections || {},
-        submission_status: step === 5 && completedSections ? 'completed' : 'in-progress',
+        submission_status: (step === 5 && completedSections ? 'completed' : 'in-progress') as Database['public']['Tables']['interview_progress']['Row']['submission_status'],
         submitted_at: step === 5 && completedSections ? new Date().toISOString() : null
       };
 
