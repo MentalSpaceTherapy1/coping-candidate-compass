@@ -9,16 +9,155 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admin_notes: {
+        Row: {
+          admin_id: string
+          candidate_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          rating: number | null
+          section: Database["public"]["Enums"]["interview_section"] | null
+          updated_at: string
+        }
+        Insert: {
+          admin_id: string
+          candidate_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rating?: number | null
+          section?: Database["public"]["Enums"]["interview_section"] | null
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rating?: number | null
+          section?: Database["public"]["Enums"]["interview_section"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      exercise_uploads: {
+        Row: {
+          created_at: string
+          exercise_key: string
+          file_name: string | null
+          file_path: string | null
+          file_type: string | null
+          id: string
+          upload_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_key: string
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          upload_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_key?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          upload_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      interview_answers: {
+        Row: {
+          answer: string | null
+          created_at: string
+          id: string
+          question_key: string
+          section: Database["public"]["Enums"]["interview_section"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question_key: string
+          section: Database["public"]["Enums"]["interview_section"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question_key?: string
+          section?: Database["public"]["Enums"]["interview_section"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          linkedin_url: string | null
+          phone: string | null
+          resume_file_path: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          linkedin_url?: string | null
+          phone?: string | null
+          resume_file_path?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          linkedin_url?: string | null
+          phone?: string | null
+          resume_file_path?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      interview_section:
+        | "general"
+        | "technical_scenarios"
+        | "technical_exercises"
+        | "culture"
+      user_role: "candidate" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +272,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      interview_section: [
+        "general",
+        "technical_scenarios",
+        "technical_exercises",
+        "culture",
+      ],
+      user_role: ["candidate", "admin"],
+    },
   },
 } as const

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,15 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, user, profile } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && profile) {
+      const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, profile, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -30,7 +40,6 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simple validation
     if (!formData.email || !formData.password) {
       toast({
         title: "Missing credentials",
@@ -41,23 +50,17 @@ const Login = () => {
       return;
     }
 
-    // Simulate login - check if admin
-    setTimeout(() => {
-      if (formData.email.includes("admin")) {
-        toast({
-          title: "Welcome back!",
-          description: "Logged in as administrator.",
-        });
-        navigate("/admin");
-      } else {
-        toast({
-          title: "Welcome back!",
-          description: "You can continue your interview where you left off.",
-        });
-        navigate("/interview");
-      }
-      setIsLoading(false);
-    }, 1500);
+    const { error } = await signIn(formData.email, formData.password);
+    
+    if (!error) {
+      // Navigation will be handled by useEffect after auth state changes
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      });
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -122,12 +125,6 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
-                  Forgot your password?
-                </Link>
-              </div>
-
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
@@ -148,7 +145,7 @@ const Login = () => {
 
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-700">
-                <strong>Demo:</strong> Use email with "admin" for admin access, or any other email for candidate access.
+                <strong>Demo:</strong> Use email with "admin" for admin access, or register as a candidate.
               </p>
             </div>
           </CardContent>

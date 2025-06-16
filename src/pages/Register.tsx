@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Upload, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -22,6 +23,15 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signUp, user, profile } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && profile) {
+      const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, profile, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -84,15 +94,14 @@ const Register = () => {
       return;
     }
 
-    // Simulate registration
-    setTimeout(() => {
-      toast({
-        title: "Registration successful!",
-        description: "Welcome to MentalSpace. You can now start your interview.",
-      });
-      navigate("/interview");
-      setIsLoading(false);
-    }, 1500);
+    const { error } = await signUp(formData.email, formData.password, formData.fullName);
+    
+    if (!error) {
+      // Show success message and redirect to login
+      navigate("/login");
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -237,7 +246,7 @@ const Register = () => {
                 className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating Account..." : "Create Account & Start Interview"}
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
 
