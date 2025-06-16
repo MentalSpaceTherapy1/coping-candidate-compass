@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,17 +18,17 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { signIn, user, profile } = useAuth();
+  const { signIn, user, profile, loading: authLoading } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && profile) {
+    if (user && profile && !authLoading) {
       // Use the actual database role from the profile
       const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
       console.log('Redirecting logged in user to:', redirectPath, 'Database role:', profile.role);
       navigate(redirectPath, { replace: true });
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -51,18 +52,48 @@ const Login = () => {
       return;
     }
 
-    const { error } = await signIn(formData.email, formData.password);
-    
-    if (!error) {
+    try {
+      const { error } = await signIn(formData.email, formData.password);
+      
+      if (!error) {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        // Navigation will be handled by useEffect after auth state changes
+      }
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
       });
-      // Navigation will be handled by useEffect after auth state changes
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-white animate-pulse" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-medium">Loading...</h3>
+                <p className="text-sm text-gray-500">Checking authentication status</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center py-12 px-4">
