@@ -22,9 +22,8 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && profile && !authLoading) {
-      const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
-      console.log('Already logged in, redirecting to:', redirectPath);
+    if (!authLoading && user) {
+      const redirectPath = profile?.role === 'admin' ? '/admin' : '/interview';
       navigate(redirectPath, { replace: true });
     }
   }, [user, profile, authLoading, navigate]);
@@ -52,18 +51,13 @@ const Login = () => {
     }
 
     try {
-      console.log('Attempting to sign in...');
       const { error } = await signIn(formData.email, formData.password);
       
       if (!error) {
-        console.log('Sign in successful');
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
-        // AuthProvider will handle the redirect
-      } else {
-        console.error('Sign in failed:', error);
       }
     } catch (error) {
       console.error('Login error:', error);

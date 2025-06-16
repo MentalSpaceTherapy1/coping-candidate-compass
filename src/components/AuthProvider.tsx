@@ -22,101 +22,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
-      console.log('Loading profile for user:', userId);
       const profileData = await fetchUserProfile(userId);
-      console.log('Profile response:', profileData);
-      
       if (profileData) {
-        console.log('Profile loaded successfully:', profileData);
         setProfile(profileData);
-        return profileData;
-      } else {
-        console.log('No profile found, creating default candidate profile');
-        // For existing users without profiles, set a default
-        setProfile({
-          id: userId,
-          email: session?.user?.email || '',
-          full_name: session?.user?.email || '',
-          role: 'candidate',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        return null;
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
-      setProfile(null);
-      return null;
+      console.error('Error loading profile:', error);
     }
   };
 
   useEffect(() => {
-    let mounted = true;
-    let profileLoadTimeout: NodeJS.Timeout | null = null;
-
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event, session?.user?.email);
+        console.log('Auth state change:', event);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          console.log('User authenticated, loading profile...');
-          
-          // Clear any existing timeout
-          if (profileLoadTimeout) {
-            clearTimeout(profileLoadTimeout);
-          }
-          
-          // Set a timeout to prevent infinite loading
-          profileLoadTimeout = setTimeout(() => {
-            console.log('Profile loading timeout, proceeding anyway');
-            if (mounted) {
-              const redirectPath = '/interview'; // Default to interview page
-              console.log('Timeout reached, redirecting to:', redirectPath);
-              if (window.location.pathname === '/login') {
-                window.location.href = redirectPath;
-              }
-            }
-          }, 5000);
-          
-          try {
-            const profileData = await loadUserProfile(session.user.id);
-            
-            // Clear timeout if profile loaded successfully
-            if (profileLoadTimeout) {
-              clearTimeout(profileLoadTimeout);
-              profileLoadTimeout = null;
-            }
-            
-            if (mounted) {
-              // Determine redirect path
-              const redirectPath = profileData?.role === 'admin' ? '/admin' : '/interview';
-              console.log('Profile loaded, redirecting to:', redirectPath);
-              
-              // Only redirect if we're currently on the login page
-              if (window.location.pathname === '/login') {
-                setTimeout(() => {
-                  window.location.href = redirectPath;
-                }, 100);
-              }
-            }
-          } catch (error) {
-            console.error('Profile loading failed:', error);
-            if (profileLoadTimeout) {
-              clearTimeout(profileLoadTimeout);
-            }
-            
-            if (mounted && window.location.pathname === '/login') {
-              // Fallback redirect on error
-              setTimeout(() => {
-                window.location.href = '/interview';
-              }, 100);
-            }
-          }
+          await loadUserProfile(session.user.id);
         } else {
           setProfile(null);
         }
@@ -126,24 +50,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      
-      console.log('Initial session check:', session?.user?.email);
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        await loadUserProfile(session.user.id);
+        loadUserProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
-      mounted = false;
-      if (profileLoadTimeout) {
-        clearTimeout(profileLoadTimeout);
-      }
       subscription.unsubscribe();
     };
   }, []);
@@ -152,14 +70,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await signUpUser(email, password, fullName);
     
     if (error) {
-      console.error('Sign up error:', error);
       toast({
         title: "Sign up failed",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      console.log('Sign up successful');
       toast({
         title: "Success!",
         description: "Please check your email to confirm your account.",
@@ -185,13 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await signOutUser();
-    
-    // Clear local state
     setUser(null);
     setSession(null);
     setProfile(null);
-    
-    // Force page reload for clean state
     window.location.href = '/';
   };
 
@@ -207,7 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         variant: "destructive"
       });
     } else {
-      // Refresh profile data
       await loadUserProfile(user.id);
       toast({
         title: "Profile updated",
