@@ -22,46 +22,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
+      console.log('Loading profile for user:', userId);
       const profileData = await fetchUserProfile(userId);
-      if (profileData) {
-        setProfile(profileData);
-      }
+      console.log('Profile loaded:', profileData);
+      setProfile(profileData);
+      return profileData;
     } catch (error) {
       console.error('Error loading profile:', error);
+      setProfile(null);
+      return null;
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event);
+        console.log('Auth state change:', event, session?.user?.id);
+        
+        if (!mounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Load profile for authenticated user
+          setTimeout(async () => {
+            if (mounted) {
+              await loadUserProfile(session.user.id);
+              if (mounted) {
+                setLoading(false);
+              }
+            }
+          }, 0);
+        } else {
+          // No user, clear profile and stop loading
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    // Check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session check:', session?.user?.id);
+        
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await loadUserProfile(session.user.id);
-        } else {
-          setProfile(null);
         }
         
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    );
+    };
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        loadUserProfile(session.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
+    initializeAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
