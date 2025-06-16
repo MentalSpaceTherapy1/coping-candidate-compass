@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +41,15 @@ const Admin = () => {
       
       console.log('Fetching candidates...');
       
-      // Fetch profiles with interview progress using the proper join now that FK is established
+      // First, let's check all profiles to see what we have
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      console.log('All profiles in database:', allProfiles);
+      console.log('All profiles error:', allProfilesError);
+
+      // Now fetch only candidates
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -50,29 +57,42 @@ const Admin = () => {
           email,
           full_name,
           created_at,
+          role,
           interview_progress (
             submission_status,
             submitted_at,
             current_step,
             completed_sections
           )
-        `)
-        .eq('role', 'candidate');
+        `);
+
+      console.log('Query for all profiles (no role filter):', profiles);
+      console.log('Profile query error:', profilesError);
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
         toast({
           title: "Error",
-          description: "Failed to fetch candidate data",
+          description: "Failed to fetch candidate data: " + profilesError.message,
           variant: "destructive"
         });
         return;
       }
 
-      console.log('Fetched profiles:', profiles);
+      // Filter candidates in JavaScript if needed
+      const candidateProfiles = (profiles || []).filter(profile => profile.role === 'candidate');
+      console.log('Filtered candidate profiles:', candidateProfiles);
+
+      // Also fetch all interview progress to see what's there
+      const { data: allProgress, error: progressError } = await supabase
+        .from('interview_progress')
+        .select('*');
+
+      console.log('All interview progress records:', allProgress);
+      console.log('Progress error:', progressError);
 
       // Transform data to match the expected format
-      const transformedCandidates: Candidate[] = (profiles || []).map(profile => {
+      const transformedCandidates: Candidate[] = candidateProfiles.map(profile => {
         const progress = Array.isArray(profile.interview_progress) 
           ? profile.interview_progress[0] 
           : profile.interview_progress;
