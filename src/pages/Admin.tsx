@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,9 @@ const Admin = () => {
     try {
       setLoading(true);
       
-      // Fetch profiles with interview progress
+      console.log('Fetching candidates...');
+      
+      // Fetch profiles with interview progress using the proper join now that FK is established
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -70,15 +71,19 @@ const Admin = () => {
         return;
       }
 
+      console.log('Fetched profiles:', profiles);
+
       // Transform data to match the expected format
       const transformedCandidates: Candidate[] = (profiles || []).map(profile => {
         const progress = Array.isArray(profile.interview_progress) 
           ? profile.interview_progress[0] 
           : profile.interview_progress;
         
+        console.log(`Processing profile ${profile.full_name}:`, { profile, progress });
+        
         return {
           id: profile.id,
-          name: profile.full_name,
+          name: profile.full_name || 'Unknown',
           email: profile.email,
           submissionStatus: progress?.submission_status || 'draft',
           dateSubmitted: progress?.submitted_at || profile.created_at,
@@ -92,6 +97,7 @@ const Admin = () => {
         };
       });
 
+      console.log('Transformed candidates:', transformedCandidates);
       setCandidates(transformedCandidates);
     } catch (error) {
       console.error('Error in fetchCandidates:', error);
