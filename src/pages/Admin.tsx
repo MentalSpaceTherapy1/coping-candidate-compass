@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,21 +41,19 @@ const Admin = () => {
       
       console.log('Fetching candidates...');
       
-      // Get all users from auth.users via RPC or edge function
-      // Since we can't directly query auth.users, we'll work with what we have
-      
-      // Get all profiles
-      const { data: allProfiles, error: profilesError } = await supabase
+      // Get all profiles (now guaranteed to exist for all users)
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .eq('role', 'candidate'); // Only get candidates, not admins
 
-      console.log('All profiles:', allProfiles);
+      console.log('Candidate profiles:', profiles);
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
         toast({
           title: "Error",
-          description: "Failed to fetch profiles: " + profilesError.message,
+          description: "Failed to fetch candidate profiles: " + profilesError.message,
           variant: "destructive"
         });
         return;
@@ -81,25 +78,25 @@ const Admin = () => {
 
       const transformedCandidates: Candidate[] = [];
 
-      // Process all profiles first (these are the primary candidates)
-      if (allProfiles) {
-        for (const profile of allProfiles) {
+      // Process all candidate profiles
+      if (profiles) {
+        for (const profile of profiles) {
           // Find corresponding interview progress
           const progress = allProgress?.find(p => p.user_id === profile.id);
           
-          console.log(`Processing profile ${profile.id}:`, { profile, progress });
+          console.log(`Processing candidate ${profile.id}:`, { profile, progress });
           
           let submissionStatus = 'not-started';
           let dateSubmitted = profile.created_at;
           
           if (progress) {
-            submissionStatus = progress.submission_status || 'draft';
+            submissionStatus = progress.submission_status || 'not-started';
             dateSubmitted = progress.submitted_at || progress.created_at || profile.created_at;
           }
           
           transformedCandidates.push({
             id: profile.id,
-            name: profile.full_name || 'Unknown',
+            name: profile.full_name,
             email: profile.email,
             submissionStatus,
             dateSubmitted,
@@ -111,31 +108,6 @@ const Admin = () => {
               culture: null
             }
           });
-        }
-      }
-
-      // Now check for any orphaned interview progress (progress without profiles)
-      if (allProgress) {
-        for (const progress of allProgress) {
-          // Only add if we don't already have this user from profiles
-          if (!transformedCandidates.find(c => c.id === progress.user_id)) {
-            console.warn(`Found orphaned interview progress for user ${progress.user_id} - creating placeholder candidate`);
-            
-            transformedCandidates.push({
-              id: progress.user_id,
-              name: 'User (Missing Profile)',
-              email: 'unknown@email.com',
-              submissionStatus: progress.submission_status || 'draft',
-              dateSubmitted: progress.submitted_at || progress.created_at,
-              overallScore: null,
-              sections: {
-                general: null,
-                technical: null,
-                exercises: null,
-                culture: null
-              }
-            });
-          }
         }
       }
 
