@@ -20,10 +20,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { signIn, user, profile, loading: authLoading } = useAuth();
 
-  // Redirect if already logged in
+  // Redirect if already logged in - but only check after auth is done loading
   useEffect(() => {
-    if (!authLoading && user) {
-      const redirectPath = profile?.role === 'admin' ? '/admin' : '/interview';
+    if (!authLoading && user && profile) {
+      console.log('User logged in, redirecting...', { user: user.id, role: profile.role });
+      const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
       navigate(redirectPath, { replace: true });
     }
   }, [user, profile, authLoading, navigate]);
@@ -71,8 +72,8 @@ const Login = () => {
     }
   };
 
-  // Show loading state while auth is initializing
-  if (authLoading) {
+  // Only show loading if we're actually still loading auth AND we don't have a clear auth state
+  if (authLoading && !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
         <Card className="w-96">
