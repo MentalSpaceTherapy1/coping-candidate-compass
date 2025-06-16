@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { getUserRoleFromMetadata } from "@/services/authService";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -22,8 +23,11 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && profile) {
-      const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
+    if (user) {
+      // Use profile role if available, otherwise fallback to user metadata
+      const userRole = profile?.role || getUserRoleFromMetadata(user);
+      const redirectPath = userRole === 'admin' ? '/admin' : '/interview';
+      console.log('Redirecting logged in user to:', redirectPath, 'Role:', userRole);
       navigate(redirectPath, { replace: true });
     }
   }, [user, profile, navigate]);
@@ -53,11 +57,11 @@ const Login = () => {
     const { error } = await signIn(formData.email, formData.password);
     
     if (!error) {
-      // Navigation will be handled by useEffect after auth state changes
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
+      // Navigation will be handled by useEffect after auth state changes
     }
     
     setIsLoading(false);

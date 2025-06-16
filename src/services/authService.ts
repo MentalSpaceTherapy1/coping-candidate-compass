@@ -6,7 +6,6 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
   try {
     console.log('Fetching profile for user:', userId);
     
-    // First try to get profile directly
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -94,4 +93,10 @@ export const updateUserProfile = async (userId: string, updates: Partial<Profile
     console.error('Update profile error:', error);
     return { error };
   }
+};
+
+// Helper function to get user role from metadata
+export const getUserRoleFromMetadata = (user: any): 'candidate' | 'admin' => {
+  const role = user?.user_metadata?.role || user?.app_metadata?.role;
+  return role === 'admin' ? 'admin' : 'candidate';
 };
