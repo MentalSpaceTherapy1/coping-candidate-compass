@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,18 +42,10 @@ const Admin = () => {
       
       console.log('Fetching candidates...');
       
-      // First, get all interview progress records
-      const { data: allProgress, error: progressError } = await supabase
-        .from('interview_progress')
-        .select('*');
-
-      console.log('All interview progress records:', allProgress);
-
-      if (progressError) {
-        console.error('Error fetching progress:', progressError);
-      }
-
-      // Now get all profiles
+      // Get all users from auth.users via RPC or edge function
+      // Since we can't directly query auth.users, we'll work with what we have
+      
+      // Get all profiles
       const { data: allProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -69,68 +62,71 @@ const Admin = () => {
         return;
       }
 
-      // Create candidates from interview progress data
+      // Get all interview progress records  
+      const { data: allProgress, error: progressError } = await supabase
+        .from('interview_progress')
+        .select('*');
+
+      console.log('All interview progress records:', allProgress);
+
+      if (progressError) {
+        console.error('Error fetching progress:', progressError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch interview progress: " + progressError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
       const transformedCandidates: Candidate[] = [];
 
-      // Process interview progress records
-      if (allProgress) {
-        for (const progress of allProgress) {
-          // Find corresponding profile
-          const profile = allProfiles?.find(p => p.id === progress.user_id);
+      // Process all profiles first (these are the primary candidates)
+      if (allProfiles) {
+        for (const profile of allProfiles) {
+          // Find corresponding interview progress
+          const progress = allProgress?.find(p => p.user_id === profile.id);
           
-          console.log(`Processing progress for user ${progress.user_id}:`, { progress, profile });
+          console.log(`Processing profile ${profile.id}:`, { profile, progress });
           
-          if (profile) {
-            // Only include if user has candidate role OR if they have interview progress (they might be a candidate without proper role)
-            transformedCandidates.push({
-              id: profile.id,
-              name: profile.full_name || 'Unknown',
-              email: profile.email,
-              submissionStatus: progress.submission_status || 'draft',
-              dateSubmitted: progress.submitted_at || progress.created_at,
-              overallScore: null,
-              sections: {
-                general: null,
-                technical: null,
-                exercises: null,
-                culture: null
-              }
-            });
-          } else {
-            // Progress without profile - this indicates orphaned data
-            console.warn(`Found interview progress for user ${progress.user_id} but no corresponding profile`);
-            
-            // Create a placeholder candidate entry
-            transformedCandidates.push({
-              id: progress.user_id,
-              name: 'Unknown User (No Profile)',
-              email: 'unknown@email.com',
-              submissionStatus: progress.submission_status || 'draft',
-              dateSubmitted: progress.submitted_at || progress.created_at,
-              overallScore: null,
-              sections: {
-                general: null,
-                technical: null,
-                exercises: null,
-                culture: null
-              }
-            });
+          let submissionStatus = 'not-started';
+          let dateSubmitted = profile.created_at;
+          
+          if (progress) {
+            submissionStatus = progress.submission_status || 'draft';
+            dateSubmitted = progress.submitted_at || progress.created_at || profile.created_at;
           }
+          
+          transformedCandidates.push({
+            id: profile.id,
+            name: profile.full_name || 'Unknown',
+            email: profile.email,
+            submissionStatus,
+            dateSubmitted,
+            overallScore: null,
+            sections: {
+              general: null,
+              technical: null,
+              exercises: null,
+              culture: null
+            }
+          });
         }
       }
 
-      // Also check for candidate profiles without interview progress
-      if (allProfiles) {
-        const candidateProfiles = allProfiles.filter(p => p.role === 'candidate');
-        for (const profile of candidateProfiles) {
-          // Only add if not already added from progress
-          if (!transformedCandidates.find(c => c.id === profile.id)) {
+      // Now check for any orphaned interview progress (progress without profiles)
+      if (allProgress) {
+        for (const progress of allProgress) {
+          // Only add if we don't already have this user from profiles
+          if (!transformedCandidates.find(c => c.id === progress.user_id)) {
+            console.warn(`Found orphaned interview progress for user ${progress.user_id} - creating placeholder candidate`);
+            
             transformedCandidates.push({
-              id: profile.id,
-              name: profile.full_name || 'Unknown',
-              email: profile.email,
-              submissionStatus: 'not-started',
-              dateSubmitted: profile.created_at,
+              id: progress.user_id,
+              name: 'User (Missing Profile)',
+              email: 'unknown@email.com',
+              submissionStatus: progress.submission_status || 'draft',
+              dateSubmitted: progress.submitted_at || progress.created_at,
               overallScore: null,
               sections: {
                 general: null,
