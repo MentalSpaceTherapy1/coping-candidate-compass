@@ -56,15 +56,14 @@ const Login = () => {
       const { error } = await signIn(formData.email, formData.password);
       
       if (!error) {
-        console.log('Sign in successful, waiting for redirect...');
+        console.log('Sign in successful');
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
-        // The AuthProvider will handle the redirect
+        // AuthProvider will handle the redirect
       } else {
         console.error('Sign in failed:', error);
-        setIsLoading(false);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -73,6 +72,7 @@ const Login = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
+    } finally {
       setIsLoading(false);
     }
   };

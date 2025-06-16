@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,16 +51,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user && event === 'SIGNED_IN') {
-          console.log('User signed in, loading profile...');
+        if (session?.user) {
+          console.log('User authenticated, loading profile...');
           const profileData = await loadUserProfile(session.user.id);
           if (profileData && mounted) {
-            // Force redirect after successful profile load
+            // Redirect based on role
             const redirectPath = profileData.role === 'admin' ? '/admin' : '/interview';
-            console.log('Redirecting to:', redirectPath);
-            window.location.href = redirectPath;
+            console.log('Profile loaded, redirecting to:', redirectPath);
+            
+            // Only redirect if we're currently on the login page
+            if (window.location.pathname === '/login') {
+              window.location.href = redirectPath;
+            }
           }
-        } else if (!session) {
+        } else {
           setProfile(null);
         }
         
