@@ -29,28 +29,22 @@ export function InviteCandidate() {
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch('/functions/v1/send-interview-invitation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      console.log('Sending invitation to:', candidateEmail);
+      
+      // Use supabase.functions.invoke instead of direct fetch
+      const { data, error } = await supabase.functions.invoke('send-interview-invitation', {
+        body: {
           candidateEmail: candidateEmail.trim(),
           candidateName: candidateName.trim() || null,
-        }),
+        }
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to send invitation');
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to send invitation');
       }
+
+      console.log('Invitation sent successfully:', data);
 
       toast({
         title: "Invitation Sent!",
