@@ -91,7 +91,7 @@ export const useCandidates = () => {
           }
           
           transformedCandidates.push({
-            id: profile.id,
+            id: profile.id, // Use the actual user profile ID
             name: profile.full_name || profile.email,
             email: profile.email,
             submissionStatus,
@@ -115,11 +115,12 @@ export const useCandidates = () => {
           
           if (!existingCandidate) {
             // This is an invited candidate who hasn't created a profile yet
+            // Use a prefixed ID to distinguish it from real user IDs
             transformedCandidates.push({
-              id: invitation.id, // Use invitation ID as temporary ID
+              id: `invitation-${invitation.id}`, // Prefix to distinguish invitation IDs
               name: invitation.candidate_name || invitation.candidate_email,
               email: invitation.candidate_email,
-              submissionStatus: 'invited', // New status for invited candidates
+              submissionStatus: 'invited',
               dateSubmitted: invitation.sent_at,
               overallScore: null,
               sections: {

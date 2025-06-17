@@ -55,8 +55,41 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     );
   };
 
-  const canReview = (status: string) => {
-    return status !== 'invited' && status !== 'not-started';
+  const canReview = (candidate: Candidate) => {
+    // Can only review if the candidate has actually started the interview
+    // and has a real user profile (not just an invitation)
+    return candidate.submissionStatus !== 'invited' && 
+           candidate.submissionStatus !== 'not-started' &&
+           !candidate.id.startsWith('invitation-'); // Check if this is an invitation ID
+  };
+
+  const canExport = (candidate: Candidate) => {
+    // Can only export if there's actual submission data
+    return candidate.submissionStatus === 'completed' || candidate.submissionStatus === 'in-progress';
+  };
+
+  const handleExport = (candidate: Candidate) => {
+    if (!canExport(candidate)) return;
+    
+    // Create a simple text export of the candidate's information
+    const exportData = {
+      name: candidate.name,
+      email: candidate.email,
+      status: candidate.submissionStatus,
+      dateSubmitted: candidate.dateSubmitted,
+      overallScore: candidate.overallScore,
+      sections: candidate.sections
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `candidate-${candidate.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   return (
@@ -108,7 +141,7 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
             </TableCell>
             <TableCell>
               <div className="flex space-x-2">
-                {canReview(candidate.submissionStatus) ? (
+                {canReview(candidate) ? (
                   <Link to={`/admin/candidate/${candidate.id}`}>
                     <Button size="sm" variant="outline">
                       <Eye className="w-4 h-4 mr-1" />
@@ -121,7 +154,12 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
                     Review
                   </Button>
                 )}
-                <Button size="sm" variant="outline" disabled={candidate.submissionStatus === 'invited'}>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  disabled={!canExport(candidate)}
+                  onClick={() => handleExport(candidate)}
+                >
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
