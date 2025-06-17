@@ -28,20 +28,23 @@ export const useCandidates = () => {
   const fetchCandidates = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching candidates...');
       
       if (!user || profile?.role !== 'admin') {
+        console.log('❌ User not authorized or not admin');
         setLoading(false);
         return;
       }
 
       // Get all candidate profiles
+      console.log('📋 Fetching candidate profiles...');
       const { data: candidateProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .eq('role', 'candidate');
 
       if (profilesError) {
-        console.error('Error fetching candidate profiles:', profilesError);
+        console.error('❌ Error fetching candidate profiles:', profilesError);
         toast({
           title: "Error",
           description: "Failed to fetch candidate profiles: " + profilesError.message,
@@ -50,13 +53,14 @@ export const useCandidates = () => {
       }
 
       // Get all interview invitations
+      console.log('📋 Fetching interview invitations...');
       const { data: invitations, error: invitationsError } = await supabase
         .from('interview_invitations')
         .select('*')
         .order('sent_at', { ascending: false });
 
       if (invitationsError) {
-        console.error('Error fetching invitations:', invitationsError);
+        console.error('❌ Error fetching invitations:', invitationsError);
         toast({
           title: "Error",
           description: "Failed to fetch invitations: " + invitationsError.message,
@@ -65,12 +69,13 @@ export const useCandidates = () => {
       }
 
       // Get all interview progress records
+      console.log('📋 Fetching interview progress...');
       const { data: progressRecords, error: progressError } = await supabase
         .from('interview_progress')
         .select('*');
 
       if (progressError) {
-        console.error('Error fetching interview progress:', progressError);
+        console.error('❌ Error fetching interview progress:', progressError);
         // Don't return here, continue without progress data
       }
 
@@ -78,6 +83,7 @@ export const useCandidates = () => {
 
       // Add existing candidate profiles
       if (candidateProfiles && candidateProfiles.length > 0) {
+        console.log(`📊 Processing ${candidateProfiles.length} candidate profiles...`);
         for (const profile of candidateProfiles) {
           // Find the progress record for this candidate
           const progress = progressRecords?.find(p => p.user_id === profile.id);
@@ -109,6 +115,7 @@ export const useCandidates = () => {
 
       // Add invited candidates who don't have profiles yet
       if (invitations && invitations.length > 0) {
+        console.log(`📨 Processing ${invitations.length} invitations...`);
         for (const invitation of invitations) {
           // Check if this email already exists in our candidate profiles
           const existingCandidate = transformedCandidates.find(c => c.email === invitation.candidate_email);
@@ -137,10 +144,11 @@ export const useCandidates = () => {
       // Sort candidates by date (most recent first)
       transformedCandidates.sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime());
 
+      console.log(`✅ Successfully loaded ${transformedCandidates.length} candidates`);
       setCandidates(transformedCandidates);
       
     } catch (error) {
-      console.error('Unexpected error in fetchCandidates:', error);
+      console.error('💥 Unexpected error in fetchCandidates:', error);
       toast({
         title: "Error",
         description: "Failed to fetch candidate data",

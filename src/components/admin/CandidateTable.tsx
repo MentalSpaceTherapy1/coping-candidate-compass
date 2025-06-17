@@ -111,33 +111,90 @@ export const CandidateTable = ({ candidates, onCandidateDeleted, onInviteResent 
     setDeletingCandidateId(candidate.id);
     
     try {
+      console.log(`🗑️ Starting deletion process for candidate: ${candidate.name} (${candidate.id})`);
+      
       // If it's an invitation-only candidate, delete from invitations table
       if (candidate.id.startsWith('invitation-')) {
         const invitationId = candidate.id.replace('invitation-', '');
+        console.log(`🔍 Deleting invitation with ID: ${invitationId}`);
+        
         const { error } = await supabase
           .from('interview_invitations')
           .delete()
           .eq('id', invitationId);
         
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Error deleting invitation:', error);
+          throw error;
+        }
+        
+        console.log(`✅ Successfully deleted invitation: ${invitationId}`);
       } else {
-        // If it's a real user, delete their profile and related data
+        console.log(`🔍 Deleting registered user with ID: ${candidate.id}`);
+        
+        // Delete in the correct order to avoid foreign key constraints
+        
+        // 1. Delete interview answers
+        console.log('🗑️ Deleting interview answers...');
         const { error: answersError } = await supabase
           .from('interview_answers')
           .delete()
           .eq('user_id', candidate.id);
         
+        if (answersError) {
+          console.error('❌ Error deleting interview answers:', answersError);
+          throw answersError;
+        }
+        
+        // 2. Delete interview progress
+        console.log('🗑️ Deleting interview progress...');
         const { error: progressError } = await supabase
           .from('interview_progress')
           .delete()
           .eq('user_id', candidate.id);
         
+        if (progressError) {
+          console.error('❌ Error deleting interview progress:', progressError);
+          throw progressError;
+        }
+        
+        // 3. Delete exercise uploads
+        console.log('🗑️ Deleting exercise uploads...');
+        const { error: uploadsError } = await supabase
+          .from('exercise_uploads')
+          .delete()
+          .eq('user_id', candidate.id);
+        
+        if (uploadsError) {
+          console.error('❌ Error deleting exercise uploads:', uploadsError);
+          throw uploadsError;
+        }
+        
+        // 4. Delete admin notes
+        console.log('🗑️ Deleting admin notes...');
+        const { error: notesError } = await supabase
+          .from('admin_notes')
+          .delete()
+          .eq('candidate_id', candidate.id);
+        
+        if (notesError) {
+          console.error('❌ Error deleting admin notes:', notesError);
+          throw notesError;
+        }
+        
+        // 5. Finally, delete the profile
+        console.log('🗑️ Deleting profile...');
         const { error: profileError } = await supabase
           .from('profiles')
           .delete()
           .eq('id', candidate.id);
         
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('❌ Error deleting profile:', profileError);
+          throw profileError;
+        }
+        
+        console.log(`✅ Successfully deleted all data for user: ${candidate.id}`);
       }
       
       toast({
@@ -145,12 +202,15 @@ export const CandidateTable = ({ candidates, onCandidateDeleted, onInviteResent 
         description: `${candidate.name} has been successfully deleted.`,
       });
       
+      // Force refresh the candidate list
+      console.log('🔄 Triggering candidate list refresh...');
       onCandidateDeleted?.();
+      
     } catch (error: any) {
-      console.error('Error deleting candidate:', error);
+      console.error('💥 Error deleting candidate:', error);
       toast({
         title: "Error",
-        description: "Failed to delete candidate: " + error.message,
+        description: `Failed to delete candidate: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -283,7 +343,7 @@ export const CandidateTable = ({ candidates, onCandidateDeleted, onInviteResent 
                       disabled={deletingCandidateId === candidate.id}
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
+                      {deletingCandidateId === candidate.id ? 'Deleting...' : 'Delete'}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -292,7 +352,7 @@ export const CandidateTable = ({ candidates, onCandidateDeleted, onInviteResent 
                       <AlertDialogDescription>
                         Are you sure you want to delete <strong>{candidate.name}</strong>? 
                         This action cannot be undone and will permanently remove all their data including 
-                        interview answers, progress, and profile information.
+                        interview answers, progress, exercise uploads, admin notes, and profile information.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
