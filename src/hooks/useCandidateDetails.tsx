@@ -56,23 +56,88 @@ export const useCandidateDetails = (candidateId: string) => {
             return;
           }
 
-          // Create candidate details from invitation data
-          const candidateDetails: CandidateDetails = {
-            id: candidateId,
-            name: invitation.candidate_name || invitation.candidate_email,
-            email: invitation.candidate_email,
-            phone: null,
-            linkedin: null,
-            submissionStatus: 'invited',
-            dateSubmitted: invitation.sent_at,
-            overallScore: null,
-            sections: {
-              general: { score: null, answers: [] },
-              technical: { score: null, answers: [] },
-              exercises: { score: null, answers: [] },
-              culture: { score: null, answers: [] }
+          // Now check if this invited candidate has actually started the interview
+          // by looking for a user profile with the same email
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', invitation.candidate_email)
+            .maybeSingle();
+
+          let candidateDetails: CandidateDetails;
+
+          if (profile && !profileError) {
+            // The invited candidate has created a profile and started the interview
+            console.log('Found profile for invited candidate:', profile);
+
+            // Fetch their interview progress
+            const { data: progress, error: progressError } = await supabase
+              .from('interview_progress')
+              .select('*')
+              .eq('user_id', profile.id)
+              .maybeSingle();
+
+            // Fetch their interview answers
+            const { data: answers, error: answersError } = await supabase
+              .from('interview_answers')
+              .select('*')
+              .eq('user_id', profile.id);
+
+            if (answersError) {
+              console.error('Error fetching answers:', answersError);
             }
-          };
+
+            // Process answers by section
+            const sectionAnswers = {
+              general: { score: null, answers: [] as string[] },
+              technical: { score: null, answers: [] as string[] },
+              exercises: { score: null, answers: [] as string[] },
+              culture: { score: null, answers: [] as string[] }
+            };
+
+            if (answers) {
+              answers.forEach(answer => {
+                const sectionKey = answer.section === 'general' ? 'general'
+                  : answer.section === 'technical_scenarios' ? 'technical'
+                  : answer.section === 'technical_exercises' ? 'exercises'
+                  : 'culture';
+
+                if (answer.answer) {
+                  sectionAnswers[sectionKey].answers.push(answer.answer);
+                }
+              });
+            }
+
+            candidateDetails = {
+              id: candidateId,
+              name: profile.full_name || invitation.candidate_name || invitation.candidate_email,
+              email: invitation.candidate_email,
+              phone: profile.phone,
+              linkedin: profile.linkedin_url,
+              submissionStatus: progress?.submission_status || 'in-progress',
+              dateSubmitted: progress?.submitted_at || progress?.created_at || invitation.sent_at,
+              overallScore: null,
+              sections: sectionAnswers
+            };
+          } else {
+            // The invited candidate hasn't started the interview yet
+            candidateDetails = {
+              id: candidateId,
+              name: invitation.candidate_name || invitation.candidate_email,
+              email: invitation.candidate_email,
+              phone: null,
+              linkedin: null,
+              submissionStatus: 'invited',
+              dateSubmitted: invitation.sent_at,
+              overallScore: null,
+              sections: {
+                general: { score: null, answers: [] },
+                technical: { score: null, answers: [] },
+                exercises: { score: null, answers: [] },
+                culture: { score: null, answers: [] }
+              }
+            };
+          }
 
           console.log('Invitation-based candidate details loaded:', candidateDetails);
           setCandidate(candidateDetails);
