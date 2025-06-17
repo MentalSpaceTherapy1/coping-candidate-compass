@@ -34,7 +34,20 @@ export const useCandidates = () => {
       console.log('Current user profile:', profile);
       console.log('User role:', profile?.role);
       
-      // Now with fixed RLS policies, we can directly query for candidate profiles
+      if (!user || profile?.role !== 'admin') {
+        console.log('❌ User not admin, skipping fetch');
+        setLoading(false);
+        return;
+      }
+
+      // First, let's try to get all profiles to see what we have access to
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      console.log('📊 All profiles accessible:', { allProfiles, error: allProfilesError });
+
+      // Now try specifically for candidates
       const { data: candidateProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -44,11 +57,50 @@ export const useCandidates = () => {
 
       if (profilesError) {
         console.error('❌ Error fetching candidate profiles:', profilesError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch candidate profiles: " + profilesError.message,
-          variant: "destructive"
-        });
+        
+        // Try a different approach - use the service role or check if we need to adjust RLS
+        console.log('🔄 Trying alternative query approach...');
+        
+        // Let's try without the role filter first
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        console.log('📊 All users without filter:', { allUsers, error: allUsersError });
+        
+        if (allUsersError) {
+          toast({
+            title: "Error",
+            description: "Failed to fetch candidate profiles: " + allUsersError.message,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Filter candidates manually if the query succeeded
+        const candidates = allUsers?.filter(profile => profile.role === 'candidate') || [];
+        console.log('📊 Manually filtered candidates:', candidates);
+        
+        if (candidates.length === 0) {
+          console.log('⚠️ No candidates found even with manual filtering');
+        }
+        
+        // Use the manually filtered data
+        setCandidates(candidates.map(profile => ({
+          id: profile.id,
+          name: profile.full_name || profile.email,
+          email: profile.email,
+          submissionStatus: 'not-started',
+          dateSubmitted: profile.created_at,
+          overallScore: null,
+          sections: {
+            general: null,
+            technical: null,
+            exercises: null,
+            culture: null
+          }
+        })));
+        
         return;
       }
 
