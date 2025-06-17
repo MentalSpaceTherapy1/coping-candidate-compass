@@ -2,8 +2,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Download, Star, Mail } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Eye, Download, Star, Mail, Trash2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Candidate {
   id: string;
@@ -22,9 +26,15 @@ interface Candidate {
 
 interface CandidateTableProps {
   candidates: Candidate[];
+  onCandidateDeleted?: () => void;
+  onInviteResent?: () => void;
 }
 
-export const CandidateTable = ({ candidates }: CandidateTableProps) => {
+export const CandidateTable = ({ candidates, onCandidateDeleted, onInviteResent }: CandidateTableProps) => {
+  const [deletingCandidateId, setDeletingCandidateId] = useState<string | null>(null);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
+  const { toast } = useToast();
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
@@ -68,6 +78,11 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     return candidate.submissionStatus === 'completed' || candidate.submissionStatus === 'in-progress';
   };
 
+  const canResendInvite = (candidate: Candidate) => {
+    // Can resend invite for invited candidates or those who haven't started
+    return candidate.submissionStatus === 'invited' || candidate.submissionStatus === 'not-started';
+  };
+
   const handleExport = (candidate: Candidate) => {
     if (!canExport(candidate)) return;
     
@@ -90,6 +105,88 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  };
+
+  const handleDeleteCandidate = async (candidate: Candidate) => {
+    setDeletingCandidateId(candidate.id);
+    
+    try {
+      // If it's an invitation-only candidate, delete from invitations table
+      if (candidate.id.startsWith('invitation-')) {
+        const invitationId = candidate.id.replace('invitation-', '');
+        const { error } = await supabase
+          .from('interview_invitations')
+          .delete()
+          .eq('id', invitationId);
+        
+        if (error) throw error;
+      } else {
+        // If it's a real user, delete their profile and related data
+        const { error: answersError } = await supabase
+          .from('interview_answers')
+          .delete()
+          .eq('user_id', candidate.id);
+        
+        const { error: progressError } = await supabase
+          .from('interview_progress')
+          .delete()
+          .eq('user_id', candidate.id);
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', candidate.id);
+        
+        if (profileError) throw profileError;
+      }
+      
+      toast({
+        title: "Candidate Deleted",
+        description: `${candidate.name} has been successfully deleted.`,
+      });
+      
+      onCandidateDeleted?.();
+    } catch (error: any) {
+      console.error('Error deleting candidate:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete candidate: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingCandidateId(null);
+    }
+  };
+
+  const handleResendInvite = async (candidate: Candidate) => {
+    setResendingInviteId(candidate.id);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-interview-invitation', {
+        body: {
+          candidateEmail: candidate.email,
+          candidateName: candidate.name !== candidate.email ? candidate.name : null,
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation Resent",
+        description: `Interview invitation has been resent to ${candidate.email}`,
+      });
+      
+      onInviteResent?.();
+    } catch (error: any) {
+      console.error('Error resending invitation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to resend invitation: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setResendingInviteId(null);
+    }
   };
 
   return (
@@ -154,6 +251,7 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
                     {candidate.submissionStatus === 'invited' ? 'Awaiting Registration' : 'No Data'}
                   </Button>
                 )}
+                
                 <Button 
                   size="sm" 
                   variant="outline" 
@@ -163,6 +261,51 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
+
+                {canResendInvite(candidate) && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    disabled={resendingInviteId === candidate.id}
+                    onClick={() => handleResendInvite(candidate)}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-1 ${resendingInviteId === candidate.id ? 'animate-spin' : ''}`} />
+                    Resend
+                  </Button>
+                )}
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      disabled={deletingCandidateId === candidate.id}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Candidate</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete <strong>{candidate.name}</strong>? 
+                        This action cannot be undone and will permanently remove all their data including 
+                        interview answers, progress, and profile information.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => handleDeleteCandidate(candidate)}
+                      >
+                        Delete Candidate
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </TableCell>
           </TableRow>

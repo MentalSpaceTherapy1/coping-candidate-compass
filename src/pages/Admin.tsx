@@ -21,6 +21,14 @@ const Admin = () => {
   const filteredCandidates = filterCandidates(candidates, searchTerm, statusFilter);
   const stats = getCandidateStats(candidates);
 
+  const handleCandidateDeleted = () => {
+    refetchCandidates();
+  };
+
+  const handleInviteResent = () => {
+    refetchCandidates();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -60,7 +68,11 @@ const Admin = () => {
             {candidates.length === 0 ? (
               <EmptyState />
             ) : (
-              <CandidateTable candidates={filteredCandidates} />
+              <CandidateTable 
+                candidates={filteredCandidates} 
+                onCandidateDeleted={handleCandidateDeleted}
+                onInviteResent={handleInviteResent}
+              />
             )}
           </CardContent>
         </Card>
