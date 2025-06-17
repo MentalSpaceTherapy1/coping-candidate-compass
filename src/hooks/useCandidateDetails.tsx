@@ -28,8 +28,8 @@ export const useCandidateDetails = (candidateId: string) => {
 
   useEffect(() => {
     const fetchCandidateDetails = async () => {
-      if (!candidateId || candidateId.startsWith('invitation-')) {
-        setError('Invalid candidate ID or candidate has not started the interview yet');
+      if (!candidateId) {
+        setError('Invalid candidate ID');
         setLoading(false);
         return;
       }
@@ -38,7 +38,50 @@ export const useCandidateDetails = (candidateId: string) => {
         setLoading(true);
         console.log('Fetching details for candidate:', candidateId);
 
-        // Fetch candidate profile
+        // Check if this is an invitation ID
+        if (candidateId.startsWith('invitation-')) {
+          const invitationId = candidateId.replace('invitation-', '');
+          
+          // Fetch invitation details
+          const { data: invitation, error: invitationError } = await supabase
+            .from('interview_invitations')
+            .select('*')
+            .eq('id', invitationId)
+            .single();
+
+          if (invitationError) {
+            console.error('Error fetching invitation:', invitationError);
+            setError('Failed to fetch candidate invitation details');
+            setLoading(false);
+            return;
+          }
+
+          // Create candidate details from invitation data
+          const candidateDetails: CandidateDetails = {
+            id: candidateId,
+            name: invitation.candidate_name || invitation.candidate_email,
+            email: invitation.candidate_email,
+            phone: null,
+            linkedin: null,
+            submissionStatus: 'invited',
+            dateSubmitted: invitation.sent_at,
+            overallScore: null,
+            sections: {
+              general: { score: null, answers: [] },
+              technical: { score: null, answers: [] },
+              exercises: { score: null, answers: [] },
+              culture: { score: null, answers: [] }
+            }
+          };
+
+          console.log('Invitation-based candidate details loaded:', candidateDetails);
+          setCandidate(candidateDetails);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+
+        // For real user IDs, fetch profile and answers
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')

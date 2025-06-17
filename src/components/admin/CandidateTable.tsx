@@ -55,14 +55,6 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     );
   };
 
-  const canReview = (candidate: Candidate) => {
-    // Can only review if the candidate has actually started the interview
-    // and has a real user profile (not just an invitation)
-    return candidate.submissionStatus !== 'invited' && 
-           candidate.submissionStatus !== 'not-started' &&
-           !candidate.id.startsWith('invitation-'); // Check if this is an invitation ID
-  };
-
   const canExport = (candidate: Candidate) => {
     // Can only export if there's actual submission data
     return candidate.submissionStatus === 'completed' || candidate.submissionStatus === 'in-progress';
@@ -141,19 +133,12 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
             </TableCell>
             <TableCell>
               <div className="flex space-x-2">
-                {canReview(candidate) ? (
-                  <Link to={`/admin/candidate/${candidate.id}`}>
-                    <Button size="sm" variant="outline">
-                      <Eye className="w-4 h-4 mr-1" />
-                      Review
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button size="sm" variant="outline" disabled>
+                <Link to={`/admin/candidate/${candidate.id}`}>
+                  <Button size="sm" variant="outline">
                     <Eye className="w-4 h-4 mr-1" />
                     Review
                   </Button>
-                )}
+                </Link>
                 <Button 
                   size="sm" 
                   variant="outline" 
