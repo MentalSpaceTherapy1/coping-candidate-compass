@@ -1,15 +1,15 @@
 
 export async function sendInvitationEmail(
-  supabaseClient: any,
+  adminClient: any,
   candidateEmail: string,
   candidateName: string | null,
   interviewUrl: string
 ) {
-  console.log("Sending email via Supabase...");
+  console.log("Sending email via Supabase admin client...");
   
   try {
-    // Use Supabase's built-in email functionality
-    const { data, error } = await supabaseClient.auth.admin.inviteUserByEmail(candidateEmail, {
+    // Use admin client with service role permissions for email operations
+    const { data, error } = await adminClient.auth.admin.inviteUserByEmail(candidateEmail, {
       data: {
         full_name: candidateName,
         role: 'candidate',

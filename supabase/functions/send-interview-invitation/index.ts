@@ -25,10 +25,12 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('No authorization header');
     }
 
-    console.log("Creating Supabase client...");
-    const supabaseClient = createClient(
+    console.log("Creating Supabase clients...");
+    
+    // Client for user validation and database operations (with user auth)
+    const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
           headers: { Authorization: authHeader },
@@ -36,8 +38,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Validate user authentication and permissions
-    const user = await validateUser(supabaseClient);
+    // Admin client for email operations (with service role key, no user auth)
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Validate user authentication and permissions using user client
+    const user = await validateUser(userClient);
 
     console.log("Parsing request body...");
     const body = await req.text();
@@ -57,9 +65,9 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Candidate email is required');
     }
 
-    // Create invitation record
+    // Create invitation record using user client
     const invitation = await createInvitationRecord(
-      supabaseClient,
+      userClient,
       candidateEmail,
       candidateName || null,
       user.id
@@ -68,9 +76,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate interview link with token
     const interviewUrl = `${Deno.env.get('SITE_URL') || 'https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com'}/interview?token=${invitation.invitation_token}`;
 
-    // Send invitation email using Supabase
+    // Send invitation email using admin client
     const emailResponse = await sendInvitationEmail(
-      supabaseClient,
+      adminClient,
       candidateEmail,
       candidateName || null,
       interviewUrl
