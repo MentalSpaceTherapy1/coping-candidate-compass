@@ -73,8 +73,8 @@ const handler = async (req: Request): Promise<Response> => {
       user.id
     );
 
-    // Generate interview link with token
-    const interviewUrl = `${Deno.env.get('SITE_URL') || 'https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com'}/interview?token=${invitation.invitation_token}`;
+    // Generate interview link with token pointing to registration
+    const interviewUrl = `https://mentalspace-interview.lovable.app/register?token=${invitation.invitation_token}`;
 
     // Send invitation email using admin client
     const emailResponse = await sendInvitationEmail(
