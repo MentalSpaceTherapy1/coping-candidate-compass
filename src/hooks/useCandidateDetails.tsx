@@ -8,13 +8,16 @@ interface CandidateDetails {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
+  linkedin: string | null;
   submissionStatus: string;
   dateSubmitted: string;
+  overallScore: number | null;
   sections: {
-    generalQuestions: any[];
-    technicalScenarios: any[];
-    technicalExercises: any[];
-    cultureQuestions: any[];
+    general: { score: number | null; answers: string[] };
+    technical: { score: number | null; answers: string[] };
+    exercises: { score: number | null; answers: string[] };
+    culture: { score: number | null; answers: string[] };
   };
   progress?: any;
 }
@@ -79,28 +82,24 @@ export const useCandidateDetails = (candidateId: string) => {
         });
       }
 
-      // Organize answers by section
+      // Organize answers by section in the format expected by the components
       const sections = {
-        generalQuestions: [],
-        technicalScenarios: [],
-        technicalExercises: [],
-        cultureQuestions: []
+        general: { score: null, answers: [] as string[] },
+        technical: { score: null, answers: [] as string[] },
+        exercises: { score: null, answers: [] as string[] },
+        culture: { score: null, answers: [] as string[] }
       };
 
       if (answersData) {
         answersData.forEach((answer) => {
-          const sectionKey = answer.section === 'general' ? 'generalQuestions'
-            : answer.section === 'technical_scenarios' ? 'technicalScenarios'
-            : answer.section === 'technical_exercises' ? 'technicalExercises'
-            : 'cultureQuestions';
+          const sectionKey = answer.section === 'general' ? 'general'
+            : answer.section === 'technical_scenarios' ? 'technical'
+            : answer.section === 'technical_exercises' ? 'exercises'
+            : 'culture';
           
-          sections[sectionKey].push({
-            questionKey: answer.question_key,
-            answer: answer.answer,
-            metadata: answer.metadata,
-            createdAt: answer.created_at,
-            updatedAt: answer.updated_at
-          });
+          if (answer.answer) {
+            sections[sectionKey].answers.push(answer.answer);
+          }
         });
       }
 
@@ -116,8 +115,11 @@ export const useCandidateDetails = (candidateId: string) => {
         id: candidateId,
         name: candidateProfile.full_name || candidateProfile.email,
         email: candidateProfile.email,
+        phone: candidateProfile.phone,
+        linkedin: candidateProfile.linkedin_url,
         submissionStatus,
         dateSubmitted,
+        overallScore: null, // TODO: Calculate from admin_notes table
         sections,
         progress: progressData
       });
