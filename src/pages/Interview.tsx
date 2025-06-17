@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Users, ExternalLink, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { InterviewContent } from "@/components/interview/InterviewContent";
+import InterviewContent from "@/components/interview/InterviewContent";
 import { useInterviewData } from "@/hooks/useInterviewData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";

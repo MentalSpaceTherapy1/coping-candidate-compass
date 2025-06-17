@@ -10,7 +10,7 @@ import InterviewSections from "@/components/candidate-review/InterviewSections";
 
 const CandidateReview = () => {
   const { candidateId } = useParams();
-  const { candidate, loading, error } = useCandidateDetails(candidateId || '');
+  const { candidate, loading } = useCandidateDetails(candidateId || '');
 
   const handleExport = () => {
     if (!candidate) return;
@@ -18,11 +18,8 @@ const CandidateReview = () => {
     const exportData = {
       name: candidate.name,
       email: candidate.email,
-      phone: candidate.phone,
-      linkedin: candidate.linkedin,
       status: candidate.submissionStatus,
       dateSubmitted: candidate.dateSubmitted,
-      overallScore: candidate.overallScore,
       sections: candidate.sections
     };
     
@@ -53,17 +50,15 @@ const CandidateReview = () => {
     );
   }
 
-  if (error || !candidate) {
+  if (!candidate) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
         <Card className="w-96">
           <CardContent className="pt-6">
             <div className="text-center">
-              <h3 className="font-medium mb-2">
-                {error || "Candidate Not Found"}
-              </h3>
+              <h3 className="font-medium mb-2">Candidate Not Found</h3>
               <p className="text-sm text-gray-500 mb-4">
-                {error || "The candidate you're looking for doesn't exist or hasn't started the interview yet."}
+                The candidate you're looking for doesn't exist or hasn't started the interview yet.
               </p>
               <Link to="/admin">
                 <Button variant="outline">

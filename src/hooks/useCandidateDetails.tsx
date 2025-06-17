@@ -36,44 +36,6 @@ export const useCandidateDetails = (candidateId: string) => {
 
       console.log('Fetching candidate details for:', candidateId);
 
-      // Check if this is an invitation ID (prefixed with 'invitation-')
-      if (candidateId.startsWith('invitation-')) {
-        // This is just an invitation, candidate hasn't created account yet
-        const invitationId = candidateId.replace('invitation-', '');
-        
-        const { data: invitation, error: invitationError } = await supabase
-          .from('interview_invitations')
-          .select('*')
-          .eq('id', invitationId)
-          .single();
-
-        if (invitationError) {
-          console.error('Error fetching invitation:', invitationError);
-          toast({
-            title: "Error",
-            description: "Failed to fetch invitation details: " + invitationError.message,
-            variant: "destructive"
-          });
-          return;
-        }
-
-        // Return invitation data with empty sections since no account created yet
-        setCandidate({
-          id: candidateId,
-          name: invitation.candidate_name || invitation.candidate_email,
-          email: invitation.candidate_email,
-          submissionStatus: 'invited',
-          dateSubmitted: invitation.sent_at,
-          sections: {
-            generalQuestions: [],
-            technicalScenarios: [],
-            technicalExercises: [],
-            cultureQuestions: []
-          }
-        });
-        return;
-      }
-
       // This is a real user ID, fetch their profile and interview data
       const { data: candidateProfile, error: profileError } = await supabase
         .from('profiles')

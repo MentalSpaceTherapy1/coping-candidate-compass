@@ -1,13 +1,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { debounce } from '@/utils/debounce';
+import { InterviewAnswerService } from '@/services/interviewAnswerService';
+import { InterviewProgressService } from '@/services/interviewProgressService';
 import type { Database } from '@/integrations/supabase/types';
 
-type InterviewAnswer = Database['public']['Tables']['interview_answers']['Row'];
 type InterviewProgress = Database['public']['Tables']['interview_progress']['Row'];
-type InterviewSection = Database['public']['Enums']['interview_section'];
 
 export const useInterviewData = () => {
   const { user } = useAuth();
@@ -36,12 +36,7 @@ export const useInterviewData = () => {
     
     try {
       // Load progress
-      console.log('📈 Loading progress for user:', user.id);
-      const { data: progressData, error: progressError } = await supabase
-        .from('interview_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      const { data: progressData, error: progressError } = await InterviewProgressService.loadProgress(user.id);
 
       if (progressError && progressError.code !== 'PGRST116') {
         console.error('❌ Error loading progress:', progressError);
@@ -53,48 +48,14 @@ export const useInterviewData = () => {
       }
 
       // Load answers
-      console.log('💬 Loading answers for user:', user.id);
-      const { data: answersData, error: answersError } = await supabase
-        .from('interview_answers')
-        .select('*')
-        .eq('user_id', user.id);
+      const { data: answersData, error: answersError } = await InterviewAnswerService.loadAnswers(user.id);
 
       if (answersError) {
         console.error('❌ Error loading answers:', answersError);
       } else if (answersData) {
         console.log('✅ Answers loaded:', answersData.length, 'answers found');
-        console.log('📋 Raw answers data:', answersData);
-        
-        const answersMap: Record<string, any> = {
-          generalQuestions: {},
-          technicalScenarios: {},
-          technicalExercises: {},
-          cultureQuestions: {}
-        };
-
-        answersData.forEach((answer: InterviewAnswer) => {
-          const sectionKey = answer.section === 'general' ? 'generalQuestions'
-            : answer.section === 'technical_scenarios' ? 'technicalScenarios'
-            : answer.section === 'technical_exercises' ? 'technicalExercises'
-            : 'cultureQuestions';
-          
-          console.log(`📝 Processing answer: section=${answer.section} -> sectionKey=${sectionKey}, question=${answer.question_key}`);
-          
-          // Safely check if metadata is an object with type property
-          const isComplexAnswer = answer.metadata && 
-            typeof answer.metadata === 'object' && 
-            answer.metadata !== null && 
-            !Array.isArray(answer.metadata) &&
-            'type' in answer.metadata && 
-            (answer.metadata as any).type === 'complex';
-          
-          answersMap[sectionKey][answer.question_key] = isComplexAnswer && 'value' in (answer.metadata as any)
-            ? (answer.metadata as any).value 
-            : answer.answer;
-        });
-
-        console.log('📊 Final answers map:', answersMap);
-        setAnswers(answersMap);
+        const processedAnswers = InterviewAnswerService.processAnswersData(answersData);
+        setAnswers(processedAnswers);
       } else {
         console.log('📝 No answers found for user');
       }
@@ -113,41 +74,8 @@ export const useInterviewData = () => {
         return;
       }
 
-      console.log('💾 Attempting to save answer:', {
-        userId: user.id,
-        section,
-        questionKey,
-        valueType: typeof value,
-        valuePreview: typeof value === 'string' ? value.substring(0, 50) + '...' : value
-      });
-
       try {
-        const sectionMapping: Record<string, InterviewSection> = {
-          'generalQuestions': 'general',
-          'technicalScenarios': 'technical_scenarios',
-          'technicalExercises': 'technical_exercises',
-          'cultureQuestions': 'culture'
-        };
-
-        const dbSection = sectionMapping[section];
-        console.log(`🗂️ Section mapping: ${section} -> ${dbSection}`);
-        
-        const answerData = {
-          user_id: user.id,
-          question_key: questionKey,
-          section: dbSection,
-          answer: typeof value === 'string' ? value : null,
-          metadata: typeof value !== 'string' ? { type: 'complex', value } : {}
-        };
-
-        console.log('📤 Saving answer data:', answerData);
-
-        const { data, error } = await supabase
-          .from('interview_answers')
-          .upsert(answerData, {
-            onConflict: 'user_id,question_key,section'
-          })
-          .select();
+        const { data, error } = await InterviewAnswerService.saveAnswer(user.id, section, questionKey, value);
 
         if (error) {
           console.error('❌ Error saving answer:', error);
@@ -202,26 +130,8 @@ export const useInterviewData = () => {
       return;
     }
 
-    console.log('📈 Updating progress:', { userId: user.id, step, completedSections });
-
     try {
-      const progressData = {
-        user_id: user.id,
-        current_step: step,
-        completed_sections: completedSections || progress?.completed_sections || {},
-        submission_status: (step === 5 && completedSections ? 'completed' : 'in-progress') as Database['public']['Tables']['interview_progress']['Row']['submission_status'],
-        submitted_at: step === 5 && completedSections ? new Date().toISOString() : null
-      };
-
-      console.log('📤 Saving progress data:', progressData);
-
-      const { data, error } = await supabase
-        .from('interview_progress')
-        .upsert(progressData, {
-          onConflict: 'user_id'
-        })
-        .select()
-        .single();
+      const { data, error } = await InterviewProgressService.updateProgress(user.id, step, completedSections);
 
       if (error) {
         console.error('❌ Error updating progress:', error);
@@ -244,15 +154,3 @@ export const useInterviewData = () => {
     lastSaved
   };
 };
-
-// Simple debounce function
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
