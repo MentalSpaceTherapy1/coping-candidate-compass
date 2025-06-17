@@ -8,6 +8,7 @@ import { Users, CheckCircle, Clock, ArrowLeft, ArrowRight, Save } from "lucide-r
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useInterviewData } from "@/hooks/useInterviewData";
+import { ProfileDropdown } from "@/components/ProfileDropdown";
 import GeneralQuestions from "@/components/interview/GeneralQuestions";
 import TechnicalScenarios from "@/components/interview/TechnicalScenarios";
 import TechnicalExercises from "@/components/interview/TechnicalExercises";
@@ -37,16 +38,6 @@ const Interview = () => {
 
   const currentStepData = steps.find(step => step.id === currentStep);
   const progressPercentage = (currentStep / steps.length) * 100;
-
-  // Auto-save functionality
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLastSaved(new Date());
-      console.log("Auto-save triggered...");
-    }, 30000); // Every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
 
   const handleStepData = async (stepName: string, data: any) => {
     // Save each answer individually
@@ -123,6 +114,7 @@ const Interview = () => {
                 <Clock className="w-3 h-3" />
                 <span>{currentStepData?.estimatedTime}</span>
               </Badge>
+              <ProfileDropdown />
             </div>
           </div>
           
