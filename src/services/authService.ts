@@ -3,7 +3,7 @@ import { Profile } from '@/types/auth';
 
 export const fetchUserProfile = async (userId: string): Promise<Profile | null> => {
   try {
-    console.log('Fetching profile for user:', userId);
+    console.log('🔍 Fetching profile for user:', userId);
     
     const { data, error } = await supabase
       .from('profiles')
@@ -12,14 +12,20 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
       .maybeSingle();
 
     if (error) {
-      console.error('Supabase error fetching profile:', error);
+      console.error('❌ Supabase error fetching profile:', error);
       throw error;
     }
 
-    console.log('Profile fetch result:', data);
+    console.log('📊 Profile fetch result:', data);
+    
+    if (!data) {
+      console.warn('⚠️ No profile found for user:', userId);
+      return null;
+    }
+    
     return data;
   } catch (error) {
-    console.error('Error in fetchUserProfile:', error);
+    console.error('💥 Error in fetchUserProfile:', error);
     throw error;
   }
 };

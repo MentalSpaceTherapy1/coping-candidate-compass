@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,13 +21,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
-      console.log('Loading profile for user:', userId);
+      console.log('🔍 Loading profile for user:', userId);
       const profileData = await fetchUserProfile(userId);
-      console.log('Profile loaded:', profileData);
+      console.log('✅ Profile loaded successfully:', profileData);
       setProfile(profileData);
       return profileData;
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('❌ Error loading profile:', error);
       setProfile(null);
       return null;
     }
@@ -36,28 +35,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    console.log('🚀 AuthProvider initializing...');
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
+        console.log('🔄 Auth state change:', { event, userId: session?.user?.id, mounted });
         
-        if (!mounted) return;
+        if (!mounted) {
+          console.log('⚠️ Component unmounted, ignoring auth state change');
+          return;
+        }
 
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('👤 User authenticated, loading profile...');
           // Load profile for authenticated user
           loadUserProfile(session.user.id).finally(() => {
             if (mounted) {
+              console.log('✅ Profile loading complete, setting loading to false');
               setLoading(false);
             }
           });
         } else {
+          console.log('🚪 No user session, clearing profile');
           // No user, clear profile
           setProfile(null);
           if (mounted) {
+            console.log('✅ Auth state cleared, setting loading to false');
             setLoading(false);
           }
         }
@@ -67,25 +74,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for existing session on mount
     const initializeAuth = async () => {
       try {
+        console.log('🔍 Checking for existing session...');
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('Initial session check:', session?.user?.id);
+        console.log('📋 Initial session check result:', { userId: session?.user?.id });
         
-        if (!mounted) return;
+        if (!mounted) {
+          console.log('⚠️ Component unmounted during initialization');
+          return;
+        }
 
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('👤 Existing user found, loading profile...');
           await loadUserProfile(session.user.id);
         } else {
+          console.log('🚪 No existing session found');
           setProfile(null);
         }
         
         if (mounted) {
+          console.log('✅ Auth initialization complete, setting loading to false');
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('💥 Error initializing auth:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -95,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
 
     return () => {
+      console.log('🧹 AuthProvider cleanup');
       mounted = false;
       subscription.unsubscribe();
     };
@@ -173,6 +188,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     updateProfile
   };
+
+  console.log('🎯 AuthProvider render state:', { 
+    loading, 
+    userId: user?.id, 
+    profileRole: profile?.role,
+    hasSession: !!session 
+  });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
