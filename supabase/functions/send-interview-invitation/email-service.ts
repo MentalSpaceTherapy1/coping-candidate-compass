@@ -12,7 +12,7 @@ export async function sendInvitationEmail(
   console.log("Sending email...");
   
   const emailResponse = await resend.emails.send({
-    from: "MentalSpace Hiring <onboarding@resend.dev>",
+    from: "MentalSpace Hiring <hrservices@chctherapy.com>",
     to: [candidateEmail],
     subject: "Interview Invitation - MentalSpace Position",
     html: generateEmailHTML(candidateName, interviewUrl),
