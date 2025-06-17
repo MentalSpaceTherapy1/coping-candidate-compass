@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +15,8 @@ import CultureFit from "@/components/interview/CultureFit";
 import ReviewSubmit from "@/components/interview/ReviewSubmit";
 
 const Interview = () => {
-  const { progress, answers, saveAnswer, updateProgress, loading } = useInterviewData();
+  const { progress, answers, saveAnswer, updateProgress, loading, lastSaved } = useInterviewData();
   const [currentStep, setCurrentStep] = useState(1);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const { toast } = useToast();
 
   const steps = [
@@ -40,18 +38,12 @@ const Interview = () => {
   const progressPercentage = (currentStep / steps.length) * 100;
 
   const handleStepData = async (stepName: string, data: any) => {
-    // Save each answer individually
+    // Save each answer individually with debouncing
     for (const [questionKey, value] of Object.entries(data)) {
       if (value && (typeof value === 'string' ? value.trim() : true)) {
         await saveAnswer(stepName, questionKey, value);
       }
     }
-    
-    setLastSaved(new Date());
-    toast({
-      title: "Progress saved",
-      description: "Your answers have been automatically saved.",
-    });
   };
 
   const handleNext = async () => {
