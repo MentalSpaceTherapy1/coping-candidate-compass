@@ -1,15 +1,17 @@
-
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Upload, Eye, EyeOff } from "lucide-react";
+import { Users, Upload, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const Register = () => {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -63,7 +65,7 @@ const Register = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validation - removed resume requirement
+    // Validation
     if (!formData.fullName || !formData.email || !formData.password) {
       toast({
         title: "Missing required fields",
@@ -98,11 +100,14 @@ const Register = () => {
     
     if (!error) {
       // Show success message and redirect to login with confirmation message
+      const loginUrl = token ? `/login?message=Please check your email and click the confirmation link to complete your registration.&token=${token}` : "/login?message=Please check your email and click the confirmation link to complete your registration.";
+      
       toast({
         title: "Account created successfully!",
         description: "Please check your email and click the confirmation link to activate your account.",
       });
-      navigate("/login?message=Please check your email and click the confirmation link to complete your registration.");
+      
+      navigate(loginUrl);
     }
     
     setIsLoading(false);
@@ -126,9 +131,20 @@ const Register = () => {
 
         <Card className="border-0 shadow-xl">
           <CardHeader className="text-center">
+            {token && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center space-x-2 text-green-700">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">Interview Invitation</span>
+                </div>
+                <p className="text-sm text-green-600 mt-1">
+                  You've been invited to complete an interview. Create your account to begin.
+                </p>
+              </div>
+            )}
             <CardTitle className="text-2xl font-bold">Create Your Account</CardTitle>
             <CardDescription>
-              Join our developer interview process
+              {token ? "Complete your registration to start the interview" : "Join our developer interview process"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -256,7 +272,7 @@ const Register = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{" "}
-                <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link to={token ? `/login?token=${token}` : "/login"} className="text-blue-600 hover:text-blue-700 font-medium">
                   Sign in
                 </Link>
               </p>
