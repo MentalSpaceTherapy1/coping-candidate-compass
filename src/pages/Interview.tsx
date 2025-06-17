@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import InterviewContent from "@/components/interview/InterviewContent";
+import SimpleInterviewFlow from "@/components/interview/SimpleInterviewFlow";
 import { useInterviewData } from "@/hooks/useInterviewData";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,7 +114,7 @@ const Interview = () => {
 
   // User is authenticated - show interview content
   return (
-    <InterviewContent
+    <SimpleInterviewFlow
       progress={progress}
       answers={answers}
       saveAnswer={saveAnswer}
