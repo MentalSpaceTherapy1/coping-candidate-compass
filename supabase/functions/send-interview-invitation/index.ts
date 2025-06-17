@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Creating Supabase client...");
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         global: {
           headers: { Authorization: authHeader },
@@ -68,8 +68,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate interview link with token
     const interviewUrl = `${Deno.env.get('SITE_URL') || 'https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com'}/interview?token=${invitation.invitation_token}`;
 
-    // Send invitation email
+    // Send invitation email using Supabase
     const emailResponse = await sendInvitationEmail(
+      supabaseClient,
       candidateEmail,
       candidateName || null,
       interviewUrl
@@ -78,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({ 
       success: true, 
       invitationId: invitation.id,
-      emailId: emailResponse.data?.id 
+      emailId: emailResponse?.user?.id 
     }), {
       status: 200,
       headers: {
