@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import EmailConfirmation from "./pages/EmailConfirmation";
 import Interview from "./pages/Interview";
 import Admin from "./pages/Admin";
 import AdminSettings from "./pages/AdminSettings";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/email-confirmation" element={<EmailConfirmation />} />
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />

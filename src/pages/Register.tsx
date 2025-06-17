@@ -97,8 +97,12 @@ const Register = () => {
     const { error } = await signUp(formData.email, formData.password, formData.fullName);
     
     if (!error) {
-      // Show success message and redirect to login
-      navigate("/login");
+      // Show success message and redirect to login with confirmation message
+      toast({
+        title: "Account created successfully!",
+        description: "Please check your email and click the confirmation link to activate your account.",
+      });
+      navigate("/login?message=Please check your email and click the confirmation link to complete your registration.");
     }
     
     setIsLoading(false);
