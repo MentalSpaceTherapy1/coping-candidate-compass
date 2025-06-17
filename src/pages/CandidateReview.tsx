@@ -5,56 +5,40 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Star, Calendar, User, Mail, Phone, LinkedinIcon, Download } from "lucide-react";
+import { useCandidateDetails } from "@/hooks/useCandidateDetails";
 
 const CandidateReview = () => {
   const { candidateId } = useParams();
-  
-  // Mock data - in a real app, this would be fetched based on candidateId
-  const mockCandidates = {
-    "1": {
-      id: 1,
-      name: "Sarah Johnson",
-      email: "sarah.j@email.com",
-      phone: "+1 (555) 123-4567",
-      linkedin: "https://linkedin.com/in/sarah-johnson",
-      submissionStatus: "completed",
-      dateSubmitted: "2024-01-15",
-      overallScore: 4.2,
-      sections: {
-        general: { score: 4.5, answers: ["5+ years in software development", "Led team of 8 developers", "Passionate about user experience"] },
-        technical: { score: 4.0, answers: ["React, Node.js, Python", "Implemented microservices architecture", "Experience with AWS and Docker"] },
-        exercises: { score: 4.1, answers: ["Completed coding challenge in 45 minutes", "Clean, well-documented code", "Efficient algorithm implementation"] },
-        culture: { score: 4.2, answers: ["Values collaboration and open communication", "Enjoys mentoring junior developers", "Seeks continuous learning opportunities"] }
-      }
-    },
-    "2": {
-      id: 2,
-      name: "Michael Chen",
-      email: "m.chen@email.com",
-      phone: "+1 (555) 987-6543",
-      linkedin: "https://linkedin.com/in/michael-chen",
-      submissionStatus: "in-progress",
-      dateSubmitted: "2024-01-14",
-      overallScore: null,
-      sections: {
-        general: { score: null, answers: [] },
-        technical: { score: null, answers: [] },
-        exercises: { score: null, answers: [] },
-        culture: { score: null, answers: [] }
-      }
-    }
-  };
+  const { candidate, loading, error } = useCandidateDetails(candidateId || '');
 
-  const candidate = mockCandidates[candidateId as keyof typeof mockCandidates];
-
-  if (!candidate) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
         <Card className="w-96">
           <CardContent className="pt-6">
             <div className="text-center">
-              <h3 className="font-medium mb-2">Candidate Not Found</h3>
-              <p className="text-sm text-gray-500 mb-4">The candidate you're looking for doesn't exist.</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h3 className="font-medium mb-2">Loading Candidate Details</h3>
+              <p className="text-sm text-gray-500">Please wait while we fetch the candidate information...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !candidate) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h3 className="font-medium mb-2">
+                {error || "Candidate Not Found"}
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {error || "The candidate you're looking for doesn't exist or hasn't started the interview yet."}
+              </p>
               <Link to="/admin">
                 <Button variant="outline">
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -82,13 +66,36 @@ const CandidateReview = () => {
   };
 
   const getScoreDisplay = (score: number | null) => {
-    if (score === null) return <span className="text-gray-400">Not completed</span>;
+    if (score === null) return <span className="text-gray-400">Not scored</span>;
     return (
       <div className="flex items-center space-x-1">
         <Star className="w-4 h-4 text-yellow-400 fill-current" />
         <span className="font-medium">{score.toFixed(1)}</span>
       </div>
     );
+  };
+
+  const handleExport = () => {
+    const exportData = {
+      name: candidate.name,
+      email: candidate.email,
+      phone: candidate.phone,
+      linkedin: candidate.linkedin,
+      status: candidate.submissionStatus,
+      dateSubmitted: candidate.dateSubmitted,
+      overallScore: candidate.overallScore,
+      sections: candidate.sections
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `candidate-${candidate.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
   };
 
   return (
@@ -111,7 +118,7 @@ const CandidateReview = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="w-4 h-4 mr-2" />
                 Export Report
               </Button>
@@ -144,16 +151,20 @@ const CandidateReview = () => {
                     <Mail className="w-4 h-4 text-gray-500" />
                     <span>{candidate.email}</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <span>{candidate.phone}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <LinkedinIcon className="w-4 h-4 text-gray-500" />
-                    <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                      LinkedIn Profile
-                    </a>
-                  </div>
+                  {candidate.phone && (
+                    <div className="flex items-center space-x-2 text-sm">
+                      <Phone className="w-4 h-4 text-gray-500" />
+                      <span>{candidate.phone}</span>
+                    </div>
+                  )}
+                  {candidate.linkedin && (
+                    <div className="flex items-center space-x-2 text-sm">
+                      <LinkedinIcon className="w-4 h-4 text-gray-500" />
+                      <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        LinkedIn Profile
+                      </a>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2 text-sm">
                     <Calendar className="w-4 h-4 text-gray-500" />
                     <span>Submitted: {new Date(candidate.dateSubmitted).toLocaleDateString()}</span>
