@@ -1,243 +1,188 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CandidateDetails {
   id: string;
   name: string;
   email: string;
-  phone: string | null;
-  linkedin: string | null;
   submissionStatus: string;
   dateSubmitted: string;
-  overallScore: number | null;
   sections: {
-    general: { score: number | null; answers: string[] };
-    technical: { score: number | null; answers: string[] };
-    exercises: { score: number | null; answers: string[] };
-    culture: { score: number | null; answers: string[] };
+    generalQuestions: any[];
+    technicalScenarios: any[];
+    technicalExercises: any[];
+    cultureQuestions: any[];
   };
+  progress?: any;
 }
 
 export const useCandidateDetails = (candidateId: string) => {
   const [candidate, setCandidate] = useState<CandidateDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user, profile } = useAuth();
 
-  useEffect(() => {
-    const fetchCandidateDetails = async () => {
-      if (!candidateId) {
-        setError('Invalid candidate ID');
+  const fetchCandidateDetails = async () => {
+    try {
+      setLoading(true);
+      
+      if (!user || profile?.role !== 'admin') {
         setLoading(false);
         return;
       }
 
-      try {
-        setLoading(true);
-        console.log('Fetching details for candidate:', candidateId);
+      console.log('Fetching candidate details for:', candidateId);
 
-        // Check if this is an invitation ID
-        if (candidateId.startsWith('invitation-')) {
-          const invitationId = candidateId.replace('invitation-', '');
-          
-          // Fetch invitation details
-          const { data: invitation, error: invitationError } = await supabase
-            .from('interview_invitations')
-            .select('*')
-            .eq('id', invitationId)
-            .single();
-
-          if (invitationError) {
-            console.error('Error fetching invitation:', invitationError);
-            setError('Failed to fetch candidate invitation details');
-            setLoading(false);
-            return;
-          }
-
-          // Now check if this invited candidate has actually started the interview
-          // by looking for a user profile with the same email
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('email', invitation.candidate_email)
-            .maybeSingle();
-
-          let candidateDetails: CandidateDetails;
-
-          if (profile && !profileError) {
-            // The invited candidate has created a profile and started the interview
-            console.log('Found profile for invited candidate:', profile);
-
-            // Fetch their interview progress
-            const { data: progress, error: progressError } = await supabase
-              .from('interview_progress')
-              .select('*')
-              .eq('user_id', profile.id)
-              .maybeSingle();
-
-            // Fetch their interview answers
-            const { data: answers, error: answersError } = await supabase
-              .from('interview_answers')
-              .select('*')
-              .eq('user_id', profile.id);
-
-            if (answersError) {
-              console.error('Error fetching answers:', answersError);
-            }
-
-            // Process answers by section
-            const sectionAnswers = {
-              general: { score: null, answers: [] as string[] },
-              technical: { score: null, answers: [] as string[] },
-              exercises: { score: null, answers: [] as string[] },
-              culture: { score: null, answers: [] as string[] }
-            };
-
-            if (answers) {
-              answers.forEach(answer => {
-                const sectionKey = answer.section === 'general' ? 'general'
-                  : answer.section === 'technical_scenarios' ? 'technical'
-                  : answer.section === 'technical_exercises' ? 'exercises'
-                  : 'culture';
-
-                if (answer.answer) {
-                  sectionAnswers[sectionKey].answers.push(answer.answer);
-                }
-              });
-            }
-
-            candidateDetails = {
-              id: candidateId,
-              name: profile.full_name || invitation.candidate_name || invitation.candidate_email,
-              email: invitation.candidate_email,
-              phone: profile.phone,
-              linkedin: profile.linkedin_url,
-              submissionStatus: progress?.submission_status || 'in-progress',
-              dateSubmitted: progress?.submitted_at || progress?.created_at || invitation.sent_at,
-              overallScore: null,
-              sections: sectionAnswers
-            };
-          } else {
-            // The invited candidate hasn't started the interview yet
-            candidateDetails = {
-              id: candidateId,
-              name: invitation.candidate_name || invitation.candidate_email,
-              email: invitation.candidate_email,
-              phone: null,
-              linkedin: null,
-              submissionStatus: 'invited',
-              dateSubmitted: invitation.sent_at,
-              overallScore: null,
-              sections: {
-                general: { score: null, answers: [] },
-                technical: { score: null, answers: [] },
-                exercises: { score: null, answers: [] },
-                culture: { score: null, answers: [] }
-              }
-            };
-          }
-
-          console.log('Invitation-based candidate details loaded:', candidateDetails);
-          setCandidate(candidateDetails);
-          setError(null);
-          setLoading(false);
-          return;
-        }
-
-        // For real user IDs, fetch profile and answers
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
+      // Check if this is an invitation ID (prefixed with 'invitation-')
+      if (candidateId.startsWith('invitation-')) {
+        // This is just an invitation, candidate hasn't created account yet
+        const invitationId = candidateId.replace('invitation-', '');
+        
+        const { data: invitation, error: invitationError } = await supabase
+          .from('interview_invitations')
           .select('*')
-          .eq('id', candidateId)
+          .eq('id', invitationId)
           .single();
 
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          setError('Failed to fetch candidate profile');
-          setLoading(false);
-          return;
-        }
-
-        // Fetch interview progress
-        const { data: progress, error: progressError } = await supabase
-          .from('interview_progress')
-          .select('*')
-          .eq('user_id', candidateId)
-          .single();
-
-        if (progressError && progressError.code !== 'PGRST116') {
-          console.error('Error fetching progress:', progressError);
-        }
-
-        // Fetch interview answers
-        const { data: answers, error: answersError } = await supabase
-          .from('interview_answers')
-          .select('*')
-          .eq('user_id', candidateId);
-
-        if (answersError) {
-          console.error('Error fetching answers:', answersError);
+        if (invitationError) {
+          console.error('Error fetching invitation:', invitationError);
           toast({
             title: "Error",
-            description: "Failed to fetch candidate answers",
+            description: "Failed to fetch invitation details: " + invitationError.message,
             variant: "destructive"
           });
+          return;
         }
 
-        // Process answers by section
-        const sectionAnswers = {
-          general: { score: null, answers: [] as string[] },
-          technical: { score: null, answers: [] as string[] },
-          exercises: { score: null, answers: [] as string[] },
-          culture: { score: null, answers: [] as string[] }
-        };
+        // Return invitation data with empty sections since no account created yet
+        setCandidate({
+          id: candidateId,
+          name: invitation.candidate_name || invitation.candidate_email,
+          email: invitation.candidate_email,
+          submissionStatus: 'invited',
+          dateSubmitted: invitation.sent_at,
+          sections: {
+            generalQuestions: [],
+            technicalScenarios: [],
+            technicalExercises: [],
+            cultureQuestions: []
+          }
+        });
+        return;
+      }
 
-        if (answers) {
-          answers.forEach(answer => {
-            const sectionKey = answer.section === 'general' ? 'general'
-              : answer.section === 'technical_scenarios' ? 'technical'
-              : answer.section === 'technical_exercises' ? 'exercises'
-              : 'culture';
+      // This is a real user ID, fetch their profile and interview data
+      const { data: candidateProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', candidateId)
+        .single();
 
-            if (answer.answer) {
-              sectionAnswers[sectionKey].answers.push(answer.answer);
-            }
-          });
-        }
-
-        const candidateDetails: CandidateDetails = {
-          id: profile.id,
-          name: profile.full_name || profile.email,
-          email: profile.email,
-          phone: profile.phone,
-          linkedin: profile.linkedin_url,
-          submissionStatus: progress?.submission_status || 'not-started',
-          dateSubmitted: progress?.submitted_at || progress?.created_at || profile.created_at,
-          overallScore: null, // Can be calculated later if needed
-          sections: sectionAnswers
-        };
-
-        console.log('Candidate details loaded:', candidateDetails);
-        setCandidate(candidateDetails);
-        setError(null);
-
-      } catch (error) {
-        console.error('Error fetching candidate details:', error);
-        setError('Failed to fetch candidate details');
+      if (profileError) {
+        console.error('Error fetching candidate profile:', profileError);
         toast({
           title: "Error",
-          description: "Failed to fetch candidate details",
+          description: "Failed to fetch candidate profile: " + profileError.message,
           variant: "destructive"
         });
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    fetchCandidateDetails();
-  }, [candidateId, toast]);
+      // Get interview progress
+      const { data: progressData, error: progressError } = await supabase
+        .from('interview_progress')
+        .select('*')
+        .eq('user_id', candidateId)
+        .maybeSingle();
 
-  return { candidate, loading, error };
+      if (progressError) {
+        console.error('Error fetching progress:', progressError);
+      }
+
+      // Get all interview answers
+      const { data: answersData, error: answersError } = await supabase
+        .from('interview_answers')
+        .select('*')
+        .eq('user_id', candidateId);
+
+      if (answersError) {
+        console.error('Error fetching answers:', answersError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch interview answers: " + answersError.message,
+          variant: "destructive"
+        });
+      }
+
+      // Organize answers by section
+      const sections = {
+        generalQuestions: [],
+        technicalScenarios: [],
+        technicalExercises: [],
+        cultureQuestions: []
+      };
+
+      if (answersData) {
+        answersData.forEach((answer) => {
+          const sectionKey = answer.section === 'general' ? 'generalQuestions'
+            : answer.section === 'technical_scenarios' ? 'technicalScenarios'
+            : answer.section === 'technical_exercises' ? 'technicalExercises'
+            : 'cultureQuestions';
+          
+          sections[sectionKey].push({
+            questionKey: answer.question_key,
+            answer: answer.answer,
+            metadata: answer.metadata,
+            createdAt: answer.created_at,
+            updatedAt: answer.updated_at
+          });
+        });
+      }
+
+      let submissionStatus = 'not-started';
+      let dateSubmitted = candidateProfile.created_at;
+      
+      if (progressData) {
+        submissionStatus = progressData.submission_status || 'not-started';
+        dateSubmitted = progressData.submitted_at || progressData.updated_at || progressData.created_at || candidateProfile.created_at;
+      }
+
+      setCandidate({
+        id: candidateId,
+        name: candidateProfile.full_name || candidateProfile.email,
+        email: candidateProfile.email,
+        submissionStatus,
+        dateSubmitted,
+        sections,
+        progress: progressData
+      });
+
+    } catch (error) {
+      console.error('Unexpected error in fetchCandidateDetails:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch candidate details",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (candidateId && user && profile?.role === 'admin') {
+      fetchCandidateDetails();
+    } else {
+      setLoading(false);
+    }
+  }, [candidateId, user, profile]);
+
+  return {
+    candidate,
+    loading,
+    refetchCandidate: fetchCandidateDetails
+  };
 };

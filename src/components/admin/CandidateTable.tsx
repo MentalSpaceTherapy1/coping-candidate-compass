@@ -55,6 +55,14 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     );
   };
 
+  const canReview = (candidate: Candidate) => {
+    // Only allow review for candidates who have created accounts and started/completed interviews
+    return !candidate.id.startsWith('invitation-') && 
+           (candidate.submissionStatus === 'completed' || 
+            candidate.submissionStatus === 'in-progress' || 
+            candidate.submissionStatus === 'draft');
+  };
+
   const canExport = (candidate: Candidate) => {
     // Can only export if there's actual submission data
     return candidate.submissionStatus === 'completed' || candidate.submissionStatus === 'in-progress';
@@ -133,12 +141,19 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
             </TableCell>
             <TableCell>
               <div className="flex space-x-2">
-                <Link to={`/admin/candidate/${candidate.id}`}>
-                  <Button size="sm" variant="outline">
+                {canReview(candidate) ? (
+                  <Link to={`/admin/candidate/${candidate.id}`}>
+                    <Button size="sm" variant="outline">
+                      <Eye className="w-4 h-4 mr-1" />
+                      Review
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button size="sm" variant="outline" disabled>
                     <Eye className="w-4 h-4 mr-1" />
-                    Review
+                    {candidate.submissionStatus === 'invited' ? 'Awaiting Registration' : 'No Data'}
                   </Button>
-                </Link>
+                )}
                 <Button 
                   size="sm" 
                   variant="outline" 

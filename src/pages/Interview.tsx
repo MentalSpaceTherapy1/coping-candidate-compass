@@ -1,116 +1,181 @@
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Users, ExternalLink, CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { InterviewContent } from "@/components/interview/InterviewContent";
 import { useInterviewData } from "@/hooks/useInterviewData";
-import GeneralQuestions from "@/components/interview/GeneralQuestions";
-import TechnicalScenarios from "@/components/interview/TechnicalScenarios";
-import TechnicalExercises from "@/components/interview/TechnicalExercises";
-import CultureFit from "@/components/interview/CultureFit";
-import ReviewSubmit from "@/components/interview/ReviewSubmit";
-import InterviewHeader from "@/components/interview/InterviewHeader";
-import InterviewSidebar from "@/components/interview/InterviewSidebar";
-import InterviewContent from "@/components/interview/InterviewContent";
-import InterviewNavigation from "@/components/interview/InterviewNavigation";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Interview = () => {
-  const { progress, answers, saveAnswer, updateProgress, loading, lastSaved } = useInterviewData();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user, profile, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [validatingToken, setValidatingToken] = useState(false);
+  const [tokenValidated, setTokenValidated] = useState(false);
+  const token = searchParams.get('token');
 
-  const steps = [
-    { id: 1, title: "General Questions", component: GeneralQuestions, estimatedTime: "15 min" },
-    { id: 2, title: "Technical Scenarios", component: TechnicalScenarios, estimatedTime: "20 min" },
-    { id: 3, title: "Technical Exercises", component: TechnicalExercises, estimatedTime: "2-4 hours" },
-    { id: 4, title: "Culture & Team Fit", component: CultureFit, estimatedTime: "10 min" },
-    { id: 5, title: "Review & Submit", component: ReviewSubmit, estimatedTime: "5 min" }
-  ];
+  // Only load interview data if user is authenticated
+  const { 
+    loading: interviewLoading, 
+    progress, 
+    answers, 
+    saveAnswer, 
+    updateProgress 
+  } = useInterviewData();
 
-  // Initialize current step from progress data
+  // Validate invitation token if present
   useEffect(() => {
-    if (progress?.current_step) {
-      setCurrentStep(progress.current_step);
-    }
-  }, [progress]);
+    const validateInvitationToken = async () => {
+      if (!token) return;
+      
+      setValidatingToken(true);
+      try {
+        const { data: invitation, error } = await supabase
+          .from('interview_invitations')
+          .select('*')
+          .eq('invitation_token', token)
+          .gt('expires_at', new Date().toISOString())
+          .single();
 
-  const currentStepData = steps.find(step => step.id === currentStep);
-  const progressPercentage = (currentStep / steps.length) * 100;
+        if (error || !invitation) {
+          toast({
+            title: "Invalid Invitation",
+            description: "This invitation link is invalid or has expired.",
+            variant: "destructive"
+          });
+          navigate('/');
+          return;
+        }
 
-  const handleStepData = async (stepName: string, data: any) => {
-    // Save each answer individually with debouncing
-    for (const [questionKey, value] of Object.entries(data)) {
-      if (value && (typeof value === 'string' ? value.trim() : true)) {
-        await saveAnswer(stepName, questionKey, value);
+        setTokenValidated(true);
+        console.log('✅ Valid invitation token for:', invitation.candidate_email);
+      } catch (error) {
+        console.error('Error validating token:', error);
+        toast({
+          title: "Error",
+          description: "Failed to validate invitation link.",
+          variant: "destructive"
+        });
+        navigate('/');
+      } finally {
+        setValidatingToken(false);
       }
-    }
-  };
+    };
 
-  const handleNext = async () => {
-    if (currentStep < steps.length) {
-      const newStep = currentStep + 1;
-      setCurrentStep(newStep);
-      await updateProgress(newStep);
-    }
-  };
+    validateInvitationToken();
+  }, [token, toast, navigate]);
 
-  const handlePrevious = async () => {
-    if (currentStep > 1) {
-      const newStep = currentStep - 1;
-      setCurrentStep(newStep);
-      await updateProgress(newStep);
-    }
-  };
-
-  const handleStepClick = async (stepId: number) => {
-    setCurrentStep(stepId);
-    await updateProgress(stepId);
-  };
-
-  if (loading) {
+  // Show loading state while checking auth or validating token
+  if (authLoading || validatingToken) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your interview...</p>
+        <Card className="w-96">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-white animate-pulse" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-medium">Loading...</h3>
+                <p className="text-sm text-gray-500">
+                  {validatingToken ? 'Validating invitation...' : 'Checking authentication...'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If user is not authenticated, show account creation prompt
+  if (!user || !profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center py-12 px-4">
+        <div className="w-full max-w-md">
+          <Card className="border-0 shadow-xl">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold">
+                {token ? 'Welcome to Your Interview' : 'Interview Access Required'}
+              </CardTitle>
+              <CardDescription>
+                {token 
+                  ? 'To begin your interview, please create an account or sign in.'
+                  : 'You need an invitation to access the interview portal.'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {token && tokenValidated && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center space-x-2 text-green-700">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-medium">Valid Invitation Confirmed</span>
+                  </div>
+                  <p className="text-sm text-green-600 mt-1">
+                    Your invitation has been verified. Create an account to begin.
+                  </p>
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                <Button
+                  onClick={() => navigate(token ? `/register?token=${token}` : '/register')}
+                  className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                  size="lg"
+                >
+                  Create Account
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(token ? `/login?token=${token}` : '/login')}
+                  className="w-full"
+                  size="lg"
+                >
+                  Sign In
+                </Button>
+              </div>
+
+              {!token && (
+                <div className="pt-4 text-center">
+                  <p className="text-sm text-gray-600 mb-3">
+                    Don't have an invitation?
+                  </p>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate('/')}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Learn More About MentalSpace
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
-  if (!currentStepData) return null;
-
+  // User is authenticated - show interview content
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <InterviewHeader
-        currentStep={currentStep}
-        totalSteps={steps.length}
-        estimatedTime={currentStepData.estimatedTime}
-        progressPercentage={progressPercentage}
-        lastSaved={lastSaved}
-      />
-
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex gap-8">
-          <InterviewSidebar
-            steps={steps}
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-          />
-
-          <InterviewContent
-            currentStepData={currentStepData}
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            answers={answers}
-            onDataChange={handleStepData}
-          />
-        </div>
-
-        <InterviewNavigation
-          currentStep={currentStep}
-          totalSteps={steps.length}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-        />
-      </div>
-    </div>
+    <InterviewContent
+      progress={progress}
+      answers={answers}
+      saveAnswer={saveAnswer}
+      updateProgress={updateProgress}
+      loading={interviewLoading}
+    />
   );
 };
 
