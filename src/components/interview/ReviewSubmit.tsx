@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, AlertCircle, Clock, FileText, Code, Users, Heart } from "lucide-react";
+import { useInterviewData } from "@/hooks/useInterviewData";
 
 interface ReviewSubmitProps {
   data: any;
@@ -17,6 +19,9 @@ const ReviewSubmit = ({ data }: ReviewSubmitProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { updateProgress } = useInterviewData();
+
+  console.log('🔍 ReviewSubmit data received:', data);
 
   const sections = [
     {
@@ -58,6 +63,8 @@ const ReviewSubmit = ({ data }: ReviewSubmitProps) => {
       sectionData[key] && 
       (typeof sectionData[key] === 'string' ? sectionData[key].trim() : true)
     ).length;
+    
+    console.log(`📊 Section completion: ${answered}/${required} answered`);
     return { answered, required, percentage: (answered / required) * 100 };
   };
 
@@ -69,7 +76,9 @@ const ReviewSubmit = ({ data }: ReviewSubmitProps) => {
       return acc;
     }, { answered: 0, required: 0 });
     
-    return (totals.answered / totals.required) * 100;
+    const percentage = (totals.answered / totals.required) * 100;
+    console.log(`📈 Total completion: ${totals.answered}/${totals.required} (${percentage.toFixed(1)}%)`);
+    return percentage;
   };
 
   const isReadyToSubmit = getTotalCompletion() >= 80; // At least 80% complete
@@ -84,17 +93,43 @@ const ReviewSubmit = ({ data }: ReviewSubmitProps) => {
       return;
     }
 
+    console.log('🚀 Starting interview submission...');
     setIsSubmitting(true);
 
-    // Simulate submission
-    setTimeout(() => {
+    try {
+      // Calculate completed sections for final submission
+      const completedSections = sections.reduce((acc, section) => {
+        const status = getCompletionStatus(section.data, section.required);
+        acc[section.id] = {
+          answered: status.answered,
+          required: status.required,
+          percentage: status.percentage
+        };
+        return acc;
+      }, {} as any);
+
+      console.log('📊 Completed sections for submission:', completedSections);
+
+      // Update progress to completed
+      await updateProgress(5, completedSections);
+
       toast({
         title: "Interview submitted successfully!",
         description: "Thank you for completing the interview. We'll be in touch soon.",
       });
+      
+      console.log('✅ Interview submission complete');
       navigate("/thank-you");
+    } catch (error) {
+      console.error('❌ Error submitting interview:', error);
+      toast({
+        title: "Submission failed",
+        description: "There was an error submitting your interview. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
   const handleConfirmationChange = (checked: boolean | "indeterminate") => {
