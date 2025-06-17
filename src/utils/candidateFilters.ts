@@ -30,10 +30,12 @@ export const filterCandidates = (
 export const getCandidateStats = (candidates: Candidate[]) => {
   const completedCount = candidates.filter(c => c.submissionStatus === "completed").length;
   const inProgressCount = candidates.filter(c => c.submissionStatus === "in-progress").length;
+  const invitedCount = candidates.filter(c => c.submissionStatus === "invited").length;
   
   return {
     totalCandidates: candidates.length,
     completedCount,
-    inProgressCount
+    inProgressCount,
+    invitedCount
   };
 };

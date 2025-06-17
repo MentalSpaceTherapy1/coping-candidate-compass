@@ -47,7 +47,21 @@ export const useCandidates = () => {
           description: "Failed to fetch candidate profiles: " + profilesError.message,
           variant: "destructive"
         });
-        return;
+      }
+
+      // Get all interview invitations
+      const { data: invitations, error: invitationsError } = await supabase
+        .from('interview_invitations')
+        .select('*')
+        .order('sent_at', { ascending: false });
+
+      if (invitationsError) {
+        console.error('Error fetching invitations:', invitationsError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch invitations: " + invitationsError.message,
+          variant: "destructive"
+        });
       }
 
       // Get all interview progress records
@@ -62,6 +76,7 @@ export const useCandidates = () => {
 
       const transformedCandidates: Candidate[] = [];
 
+      // Add existing candidate profiles
       if (candidateProfiles && candidateProfiles.length > 0) {
         for (const profile of candidateProfiles) {
           // Find the progress record for this candidate
@@ -91,6 +106,35 @@ export const useCandidates = () => {
           });
         }
       }
+
+      // Add invited candidates who don't have profiles yet
+      if (invitations && invitations.length > 0) {
+        for (const invitation of invitations) {
+          // Check if this email already exists in our candidate profiles
+          const existingCandidate = transformedCandidates.find(c => c.email === invitation.candidate_email);
+          
+          if (!existingCandidate) {
+            // This is an invited candidate who hasn't created a profile yet
+            transformedCandidates.push({
+              id: invitation.id, // Use invitation ID as temporary ID
+              name: invitation.candidate_name || invitation.candidate_email,
+              email: invitation.candidate_email,
+              submissionStatus: 'invited', // New status for invited candidates
+              dateSubmitted: invitation.sent_at,
+              overallScore: null,
+              sections: {
+                general: null,
+                technical: null,
+                exercises: null,
+                culture: null
+              }
+            });
+          }
+        }
+      }
+
+      // Sort candidates by date (most recent first)
+      transformedCandidates.sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime());
 
       setCandidates(transformedCandidates);
       

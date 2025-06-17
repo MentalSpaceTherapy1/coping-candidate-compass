@@ -48,8 +48,10 @@ export const AdminFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="invited">Invited</SelectItem>
+              <SelectItem value="not-started">Not Started</SelectItem>
               <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
             </SelectContent>
           </Select>

@@ -2,7 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Download, Star } from "lucide-react";
+import { Eye, Download, Star, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface Candidate {
@@ -33,6 +33,13 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
         return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">In Progress</Badge>;
       case "draft":
         return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Draft</Badge>;
+      case "invited":
+        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">
+          <Mail className="w-3 h-3 mr-1" />
+          Invited
+        </Badge>;
+      case "not-started":
+        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">Not Started</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -48,13 +55,17 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
     );
   };
 
+  const canReview = (status: string) => {
+    return status !== 'invited' && status !== 'not-started';
+  };
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Candidate</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Submitted</TableHead>
+          <TableHead>Date</TableHead>
           <TableHead>Overall Score</TableHead>
           <TableHead>Section Scores</TableHead>
           <TableHead>Actions</TableHead>
@@ -74,7 +85,10 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
             </TableCell>
             <TableCell>
               <div className="text-sm">
-                {new Date(candidate.dateSubmitted).toLocaleDateString()}
+                <div>{new Date(candidate.dateSubmitted).toLocaleDateString()}</div>
+                <div className="text-xs text-gray-500">
+                  {candidate.submissionStatus === 'invited' ? 'Invited' : 'Submitted'}
+                </div>
               </div>
             </TableCell>
             <TableCell>
@@ -94,13 +108,20 @@ export const CandidateTable = ({ candidates }: CandidateTableProps) => {
             </TableCell>
             <TableCell>
               <div className="flex space-x-2">
-                <Link to={`/admin/candidate/${candidate.id}`}>
-                  <Button size="sm" variant="outline">
+                {canReview(candidate.submissionStatus) ? (
+                  <Link to={`/admin/candidate/${candidate.id}`}>
+                    <Button size="sm" variant="outline">
+                      <Eye className="w-4 h-4 mr-1" />
+                      Review
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button size="sm" variant="outline" disabled>
                     <Eye className="w-4 h-4 mr-1" />
                     Review
                   </Button>
-                </Link>
-                <Button size="sm" variant="outline">
+                )}
+                <Button size="sm" variant="outline" disabled={candidate.submissionStatus === 'invited'}>
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
