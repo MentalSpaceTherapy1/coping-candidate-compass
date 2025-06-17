@@ -22,12 +22,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUserProfile = async (userId: string) => {
     try {
       console.log('🔍 Loading profile for user:', userId);
+      console.log('🔍 Current auth.uid():', (await supabase.auth.getSession()).data.session?.user?.id);
+      console.log('🔍 Auth role:', (await supabase.auth.getSession()).data.session?.user?.role);
+      
       const profileData = await fetchUserProfile(userId);
       console.log('✅ Profile loaded successfully:', profileData);
       setProfile(profileData);
       return profileData;
     } catch (error) {
       console.error('❌ Error loading profile:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      });
       setProfile(null);
       return null;
     }
@@ -40,7 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔄 Auth state change:', { event, userId: session?.user?.id, mounted });
+        console.log('🔄 Auth state change:', { 
+          event, 
+          userId: session?.user?.id, 
+          mounted,
+          userRole: session?.user?.role,
+          userAud: session?.user?.aud
+        });
         
         if (!mounted) {
           console.log('⚠️ Component unmounted, ignoring auth state change');
@@ -52,6 +67,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           console.log('👤 User authenticated, loading profile...');
+          console.log('👤 User details:', {
+            id: session.user.id,
+            email: session.user.email,
+            role: session.user.role,
+            aud: session.user.aud
+          });
+          
           // Load profile for authenticated user
           loadUserProfile(session.user.id).finally(() => {
             if (mounted) {
@@ -75,8 +97,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         console.log('🔍 Checking for existing session...');
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('📋 Initial session check result:', { userId: session?.user?.id });
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('📋 Initial session check result:', { 
+          userId: session?.user?.id,
+          error: error?.message
+        });
+        
+        if (error) {
+          console.error('❌ Error getting session:', error);
+        }
         
         if (!mounted) {
           console.log('⚠️ Component unmounted during initialization');
@@ -193,7 +222,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading, 
     userId: user?.id, 
     profileRole: profile?.role,
-    hasSession: !!session 
+    hasSession: !!session,
+    profileId: profile?.id
   });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

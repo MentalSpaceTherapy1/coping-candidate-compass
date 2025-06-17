@@ -4,12 +4,33 @@ import { Profile } from '@/types/auth';
 export const fetchUserProfile = async (userId: string): Promise<Profile | null> => {
   try {
     console.log('🔍 Fetching profile for user:', userId);
+    console.log('🔍 Making direct query to profiles table...');
+    
+    // First, let's test if we can access the table at all
+    const { data: testData, error: testError } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
+    
+    console.log('🧪 Test query result:', { testData, testError });
     
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
+
+    console.log('📊 Profile query details:', {
+      userId,
+      query: 'SELECT * FROM profiles WHERE id = $1',
+      data,
+      error: error ? {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      } : null
+    });
 
     if (error) {
       console.error('❌ Supabase error fetching profile:', error);
@@ -20,12 +41,17 @@ export const fetchUserProfile = async (userId: string): Promise<Profile | null> 
     
     if (!data) {
       console.warn('⚠️ No profile found for user:', userId);
+      console.log('🔍 This might mean:');
+      console.log('   1. The user profile was never created (trigger issue)');
+      console.log('   2. RLS is blocking the query');
+      console.log('   3. The user ID doesn\'t match');
       return null;
     }
     
     return data;
   } catch (error) {
     console.error('💥 Error in fetchUserProfile:', error);
+    console.error('💥 Full error object:', JSON.stringify(error, null, 2));
     throw error;
   }
 };
