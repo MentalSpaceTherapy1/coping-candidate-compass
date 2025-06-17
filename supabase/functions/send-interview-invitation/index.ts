@@ -25,9 +25,9 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('No authorization header');
     }
 
-    console.log("Creating Supabase clients...");
+    console.log("Creating Supabase client...");
     
-    // Client for user validation and database operations (with user auth)
+    // Client for user validation and database operations
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,13 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Admin client for email operations (with service role key, no user auth)
-    const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Validate user authentication and permissions using user client
+    // Validate user authentication and permissions
     const user = await validateUser(userClient);
 
     console.log("Parsing request body...");
@@ -65,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Candidate email is required');
     }
 
-    // Create invitation record using user client
+    // Create invitation record
     const invitation = await createInvitationRecord(
       userClient,
       candidateEmail,
@@ -76,9 +70,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate interview link with token pointing to registration
     const interviewUrl = `https://mentalspace-interview.lovable.app/register?token=${invitation.invitation_token}`;
 
-    // Send invitation email using admin client
+    // Send invitation email using Resend
     const emailResponse = await sendInvitationEmail(
-      adminClient,
+      userClient,
       candidateEmail,
       candidateName || null,
       interviewUrl
@@ -87,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({ 
       success: true, 
       invitationId: invitation.id,
-      emailId: emailResponse?.user?.id 
+      emailId: emailResponse?.id 
     }), {
       status: 200,
       headers: {
