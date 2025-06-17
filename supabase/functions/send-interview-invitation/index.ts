@@ -109,9 +109,9 @@ const handler = async (req: Request): Promise<Response> => {
     const interviewUrl = `${Deno.env.get('SITE_URL') || 'https://c7c120bb-200e-4a7f-b1ea-e1623e423468.lovableproject.com'}/interview?token=${invitation.invitation_token}`;
 
     console.log("Sending email...");
-    // Send professional email with verified domain and company logo
+    // Send professional email using default Resend domain
     const emailResponse = await resend.emails.send({
-      from: "MentalSpace Hiring <hiring@chctherapy.com>",
+      from: "MentalSpace Hiring <onboarding@resend.dev>",
       to: [candidateEmail],
       subject: "Interview Invitation - MentalSpace Position",
       html: `
