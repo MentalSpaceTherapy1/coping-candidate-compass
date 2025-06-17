@@ -1,11 +1,8 @@
 
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { InviteCandidate } from "@/components/InviteCandidate";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 
-export const AdminHeader = () => {
+export const CandidateHeader = () => {
   return (
     <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
@@ -17,17 +14,12 @@ export const AdminHeader = () => {
               className="h-8 w-auto"
             />
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-sm text-gray-600">Interview Management</p>
+              <h1 className="text-lg font-bold text-gray-900">MentalSpace</h1>
+              <p className="text-sm text-gray-600">Interview Process</p>
             </div>
           </Link>
           
           <div className="flex items-center space-x-4">
-            <InviteCandidate />
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export All
-            </Button>
             <ProfileDropdown />
           </div>
         </div>

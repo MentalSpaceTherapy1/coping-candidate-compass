@@ -11,6 +11,8 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Interview from "./pages/Interview";
 import Admin from "./pages/Admin";
+import AdminSettings from "./pages/AdminSettings";
+import Profile from "./pages/Profile";
 import CandidateReview from "./pages/CandidateReview";
 import ThankYou from "./pages/ThankYou";
 import NotFound from "./pages/NotFound";
@@ -28,6 +30,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             <Route path="/interview" element={
               <ProtectedRoute requiredRole="candidate">
                 <Interview />
@@ -36,6 +43,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute requiredRole="admin">
                 <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminSettings />
               </ProtectedRoute>
             } />
             <Route path="/admin/candidate/:candidateId" element={
