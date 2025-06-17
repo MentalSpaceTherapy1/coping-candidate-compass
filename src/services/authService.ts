@@ -60,7 +60,8 @@ export const signUpUser = async (email: string, password: string, fullName: stri
   try {
     console.log('Starting sign up process for:', email);
     
-    const redirectUrl = `${window.location.origin}/`;
+    // Use the current domain for redirect - this ensures it works in all environments
+    const redirectUrl = `${window.location.origin}/login?message=Please check your email and click the confirmation link to complete your registration.`;
     
     const { data, error } = await supabase.auth.signUp({
       email,

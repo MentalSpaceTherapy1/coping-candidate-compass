@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,44 +8,36 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { signIn, user, profile, loading: authLoading } = useAuth();
+  const { signIn, user, profile } = useAuth();
+
+  // Get message from URL params (for email confirmation)
+  const message = searchParams.get('message');
 
   // Redirect if already logged in
   useEffect(() => {
-    console.log('Auth state:', { authLoading, user: user?.id, profile: profile?.role });
-    
-    if (!authLoading && user && profile) {
-      console.log('User authenticated, redirecting...', { user: user.id, role: profile.role });
+    if (user && profile) {
       const redirectPath = profile.role === 'admin' ? '/admin' : '/interview';
       navigate(redirectPath, { replace: true });
     }
-  }, [user, profile, authLoading, navigate]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  }, [user, profile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!formData.email || !formData.password) {
+    if (!email || !password) {
       toast({
-        title: "Missing credentials",
+        title: "Missing fields",
         description: "Please enter both email and password.",
         variant: "destructive"
       });
@@ -53,47 +45,18 @@ const Login = () => {
       return;
     }
 
-    try {
-      const { error } = await signIn(formData.email, formData.password);
-      
-      if (!error) {
-        toast({
-          title: "Welcome back!",
-          description: "You have successfully signed in.",
-        });
-      }
-    } catch (error) {
-      console.error('Login error:', error);
+    const { error } = await signIn(email, password);
+    
+    if (!error) {
+      // Success - auth context will handle redirect
       toast({
-        title: "Login failed",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
       });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
-
-  // Show loading only when we're still initializing authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-white animate-pulse" />
-              </div>
-              <div className="text-center">
-                <h3 className="font-medium">Loading...</h3>
-                <p className="text-sm text-gray-500">Checking authentication status</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center py-12 px-4">
@@ -111,11 +74,20 @@ const Login = () => {
           </Link>
         </div>
 
+        {/* Email confirmation message */}
+        {message && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <AlertDescription className="text-green-800">
+              {message}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="border-0 shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
             <CardDescription>
-              Sign in to continue your interview
+              Sign in to access your interview dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -124,13 +96,12 @@ const Login = () => {
                 <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   required
-                  value={formData.email}
-                  onChange={handleInputChange}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="mt-1"
-                  placeholder="Enter your email"
+                  placeholder="your@email.com"
                 />
               </div>
 
@@ -139,11 +110,10 @@ const Login = () => {
                 <div className="relative mt-1">
                   <Input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     required
-                    value={formData.password}
-                    onChange={handleInputChange}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="pr-10"
                     placeholder="Enter your password"
                   />
@@ -170,14 +140,8 @@ const Login = () => {
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
                 <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Create one now
+                  Create one here
                 </Link>
-              </p>
-            </div>
-
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <strong>Demo:</strong> Use ejoseph@chctherapy.com (admin) or register as a candidate.
               </p>
             </div>
           </CardContent>
