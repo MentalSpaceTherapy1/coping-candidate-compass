@@ -6,8 +6,6 @@ import { validateUser, createInvitationRecord } from "./invitation-service.ts";
 import { sendInvitationEmail } from "./email-service.ts";
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Function called with method:", req.method);
-
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,9 +23,6 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('No authorization header');
     }
 
-    console.log("Creating Supabase client...");
-    
-    // Client for user validation and database operations
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,18 +33,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Validate user authentication and permissions
     const user = await validateUser(userClient);
 
-    console.log("Parsing request body...");
     const body = await req.text();
-    console.log("Request body:", body);
     
     let requestData: InvitationRequest;
     try {
       requestData = JSON.parse(body);
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
       throw new Error('Invalid JSON in request body');
     }
 
@@ -59,7 +50,6 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Candidate email is required');
     }
 
-    // Create invitation record
     const invitation = await createInvitationRecord(
       userClient,
       candidateEmail,
@@ -67,10 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
       user.id
     );
 
-    // Generate interview link with token pointing to registration
     const interviewUrl = `https://mentalspace-interview.lovable.app/register?token=${invitation.invitation_token}`;
 
-    // Send invitation email using Resend
     const emailResponse = await sendInvitationEmail(
       userClient,
       candidateEmail,

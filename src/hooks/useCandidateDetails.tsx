@@ -37,9 +37,6 @@ export const useCandidateDetails = (candidateId: string) => {
         return;
       }
 
-      console.log('Fetching candidate details for:', candidateId);
-
-      // This is a real user ID, fetch their profile and interview data
       const { data: candidateProfile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -56,7 +53,6 @@ export const useCandidateDetails = (candidateId: string) => {
         return;
       }
 
-      // Get interview progress
       const { data: progressData, error: progressError } = await supabase
         .from('interview_progress')
         .select('*')
@@ -67,7 +63,6 @@ export const useCandidateDetails = (candidateId: string) => {
         console.error('Error fetching progress:', progressError);
       }
 
-      // Get all interview answers
       const { data: answersData, error: answersError } = await supabase
         .from('interview_answers')
         .select('*')
@@ -82,7 +77,17 @@ export const useCandidateDetails = (candidateId: string) => {
         });
       }
 
-      // Organize answers by section in the format expected by the components
+      // Get admin notes for scoring
+      const { data: adminNotes, error: notesError } = await supabase
+        .from('admin_notes')
+        .select('*')
+        .eq('candidate_id', candidateId);
+
+      if (notesError) {
+        console.error('Error fetching admin notes:', notesError);
+      }
+
+      // Organize answers by section
       const sections = {
         general: { score: null, answers: [] as string[] },
         technical: { score: null, answers: [] as string[] },
@@ -103,6 +108,29 @@ export const useCandidateDetails = (candidateId: string) => {
         });
       }
 
+      // Calculate scores from admin notes
+      if (adminNotes) {
+        adminNotes.forEach((note) => {
+          if (note.rating && note.section) {
+            const sectionKey = note.section === 'general' ? 'general'
+              : note.section === 'technical_scenarios' ? 'technical'
+              : note.section === 'technical_exercises' ? 'exercises'
+              : 'culture';
+            
+            sections[sectionKey].score = note.rating;
+          }
+        });
+      }
+
+      // Calculate overall score
+      const ratings = Object.values(sections)
+        .map(section => section.score)
+        .filter(score => score !== null);
+      
+      const overallScore = ratings.length > 0 
+        ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+        : null;
+
       let submissionStatus = 'not-started';
       let dateSubmitted = candidateProfile.created_at;
       
@@ -119,13 +147,13 @@ export const useCandidateDetails = (candidateId: string) => {
         linkedin: candidateProfile.linkedin_url,
         submissionStatus,
         dateSubmitted,
-        overallScore: null, // TODO: Calculate from admin_notes table
+        overallScore,
         sections,
         progress: progressData
       });
 
     } catch (error) {
-      console.error('Unexpected error in fetchCandidateDetails:', error);
+      console.error('Error in fetchCandidateDetails:', error);
       toast({
         title: "Error",
         description: "Failed to fetch candidate details",
