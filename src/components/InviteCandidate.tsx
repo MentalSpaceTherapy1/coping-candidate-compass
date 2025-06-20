@@ -29,6 +29,45 @@ export function InviteCandidate() {
     setIsLoading(true);
 
     try {
+      // First check if there's already an invitation for this email
+      const { data: existingInvitations, error: checkError } = await supabase
+        .from('interview_invitations')
+        .select('id, candidate_email')
+        .eq('candidate_email', candidateEmail.trim().toLowerCase());
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (existingInvitations && existingInvitations.length > 0) {
+        toast({
+          title: "Invitation Already Exists",
+          description: `An invitation has already been sent to ${candidateEmail}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Also check if there's already a profile for this email
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('email', candidateEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (existingProfile) {
+        toast({
+          title: "Candidate Already Exists",
+          description: `A candidate with email ${candidateEmail} already exists in the system`,
+          variant: "destructive"
+        });
+        return;
+      }
+
       console.log('Sending invitation to:', candidateEmail);
       
       // Use supabase.functions.invoke instead of direct fetch

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -107,8 +108,19 @@ export const useCandidates = () => {
       }
 
       // Add invited candidates who don't have profiles yet
+      // Group invitations by email and take only the most recent one
+      const invitationsByEmail = new Map();
       if (invitations && invitations.length > 0) {
         for (const invitation of invitations) {
+          const email = invitation.candidate_email;
+          if (!invitationsByEmail.has(email) || 
+              new Date(invitation.sent_at) > new Date(invitationsByEmail.get(email).sent_at)) {
+            invitationsByEmail.set(email, invitation);
+          }
+        }
+
+        // Process only the most recent invitation per email
+        for (const invitation of invitationsByEmail.values()) {
           const existingCandidate = transformedCandidates.find(c => c.email === invitation.candidate_email);
           
           if (!existingCandidate) {

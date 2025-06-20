@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -20,12 +21,11 @@ export const DeleteCandidateDialog = ({ candidate, onCandidateDeleted }: DeleteC
     
     try {
       if (candidate.id.startsWith('invitation-')) {
-        const invitationId = candidate.id.replace('invitation-', '');
-        
+        // Delete ALL invitations for this email address to prevent duplicates from causing the candidate to reappear
         const { error } = await supabase
           .from('interview_invitations')
           .delete()
-          .eq('id', invitationId);
+          .eq('candidate_email', candidate.email);
         
         if (error) {
           throw error;
@@ -122,6 +122,11 @@ export const DeleteCandidateDialog = ({ candidate, onCandidateDeleted }: DeleteC
             Are you sure you want to delete <strong>{candidate.name}</strong>? 
             This action cannot be undone and will permanently remove all their data including 
             interview answers, progress, exercise uploads, admin notes, and profile information.
+            {candidate.id.startsWith('invitation-') && (
+              <span className="block mt-2 text-sm">
+                Note: This will delete all invitations for this email address.
+              </span>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
