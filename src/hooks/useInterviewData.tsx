@@ -9,7 +9,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type InterviewProgress = Database['public']['Tables']['interview_progress']['Row'];
 
-export const useInterviewData = () => {
+export const useInterviewData = (candidateEmail?: string) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -17,33 +17,63 @@ export const useInterviewData = () => {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
+  // Use either authenticated user ID or candidate email as identifier
+  const identifier = user?.id || candidateEmail;
+
   useEffect(() => {
-    if (user) {
+    if (identifier) {
       loadInterviewData();
     }
-  }, [user]);
+  }, [identifier]);
 
   const loadInterviewData = async () => {
-    if (!user) {
+    if (!identifier) {
       return;
     }
     
     setLoading(true);
     
     try {
-      const { data: progressData, error: progressError } = await InterviewProgressService.loadProgress(user.id);
+      let progressData = null;
+      let answersData = null;
 
-      if (progressError && progressError.code !== 'PGRST116') {
-        console.error('Error loading progress:', progressError);
-      } else if (progressData) {
+      if (user?.id) {
+        // Authenticated user - use user ID
+        const { data: pData, error: progressError } = await InterviewProgressService.loadProgress(user.id);
+        if (progressError && progressError.code !== 'PGRST116') {
+          console.error('Error loading progress:', progressError);
+        } else if (pData) {
+          progressData = pData;
+        }
+
+        const { data: aData, error: answersError } = await InterviewAnswerService.loadAnswers(user.id);
+        if (answersError) {
+          console.error('Error loading answers:', answersError);
+        } else if (aData) {
+          answersData = aData;
+        }
+      } else if (candidateEmail) {
+        // Anonymous user with candidate email - use email-based storage
+        const { data: pData, error: progressError } = await InterviewProgressService.loadProgressByEmail(candidateEmail);
+        if (progressError && progressError.code !== 'PGRST116') {
+          console.error('Error loading progress:', progressError);
+        } else if (pData) {
+          progressData = pData;
+        }
+
+        const { data: aData, error: answersError } = await InterviewAnswerService.loadAnswersByEmail(candidateEmail);
+        if (answersError) {
+          console.error('Error loading answers:', answersError);
+        } else if (aData) {
+          answersData = aData;
+        }
+      }
+
+      if (progressData) {
         setProgress(progressData);
       }
 
-      const { data: answersData, error: answersError } = await InterviewAnswerService.loadAnswers(user.id);
-
-      if (answersError) {
-        console.error('Error loading answers:', answersError);
-      } else if (answersData) {
+      if (answersData) {
         const processedAnswers = InterviewAnswerService.processAnswersData(answersData);
         setAnswers(processedAnswers);
       }
@@ -56,12 +86,20 @@ export const useInterviewData = () => {
 
   const debouncedSave = useCallback(
     debounce(async (section: string, questionKey: string, value: any) => {
-      if (!user) {
+      if (!identifier) {
         return;
       }
 
       try {
-        const { data, error } = await InterviewAnswerService.saveAnswer(user.id, section, questionKey, value);
+        let data, error;
+
+        if (user?.id) {
+          // Authenticated user
+          ({ data, error } = await InterviewAnswerService.saveAnswer(user.id, section, questionKey, value));
+        } else if (candidateEmail) {
+          // Anonymous user with candidate email
+          ({ data, error } = await InterviewAnswerService.saveAnswerByEmail(candidateEmail, section, questionKey, value));
+        }
 
         if (error) {
           console.error('Error saving answer:', error);
@@ -91,7 +129,7 @@ export const useInterviewData = () => {
         console.error('Error saving answer:', error);
       }
     }, 2000),
-    [user, toast]
+    [identifier, user, candidateEmail, toast]
   );
 
   const saveAnswer = async (section: string, questionKey: string, value: any) => {
@@ -101,12 +139,20 @@ export const useInterviewData = () => {
   };
 
   const updateProgress = async (step: number, completedSections?: any) => {
-    if (!user) {
+    if (!identifier) {
       return;
     }
 
     try {
-      const { data, error } = await InterviewProgressService.updateProgress(user.id, step, completedSections);
+      let data, error;
+
+      if (user?.id) {
+        // Authenticated user
+        ({ data, error } = await InterviewProgressService.updateProgress(user.id, step, completedSections));
+      } else if (candidateEmail) {
+        // Anonymous user with candidate email
+        ({ data, error } = await InterviewProgressService.updateProgressByEmail(candidateEmail, step, completedSections));
+      }
 
       if (error) {
         console.error('Error updating progress:', error);

@@ -15,16 +15,17 @@ const Interview = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [validatingToken, setValidatingToken] = useState(false);
+  const [candidateData, setCandidateData] = useState<{ email: string; name: string } | null>(null);
   const token = searchParams.get('token');
 
-  // Only load interview data if user is authenticated
+  // Only load interview data if user is authenticated OR if we have valid token data
   const { 
     loading: interviewLoading, 
     progress, 
     answers, 
     saveAnswer, 
     updateProgress 
-  } = useInterviewData();
+  } = useInterviewData(candidateData?.email);
 
   // Handle invitation token and redirect logic
   useEffect(() => {
@@ -44,7 +45,7 @@ const Interview = () => {
         return;
       }
 
-      // If not authenticated but has token, validate it and redirect to registration
+      // If not authenticated but has token, validate it for anonymous access
       if (!user && !authLoading) {
         setValidatingToken(true);
         try {
@@ -57,21 +58,25 @@ const Interview = () => {
 
           if (error || !invitation) {
             toast({
-              title: "Invalid Invitation",
-              description: "This invitation link is invalid or has expired.",
+              title: "Invalid Interview Link",
+              description: "This interview link is invalid or has expired.",
               variant: "destructive"
             });
             navigate('/');
             return;
           }
 
-          // Valid token - redirect to registration with token
-          navigate(`/register?token=${token}`, { replace: true });
+          // Valid token - set candidate data for anonymous access
+          setCandidateData({
+            email: invitation.candidate_email,
+            name: invitation.candidate_name || invitation.candidate_email
+          });
+
         } catch (error) {
           console.error('Error validating token:', error);
           toast({
             title: "Error",
-            description: "Failed to validate invitation link.",
+            description: "Failed to validate interview link.",
             variant: "destructive"
           });
           navigate('/');
@@ -97,7 +102,7 @@ const Interview = () => {
               <div className="text-center">
                 <h3 className="font-medium">Loading...</h3>
                 <p className="text-sm text-gray-500">
-                  {validatingToken ? 'Validating invitation...' : 'Loading interview...'}
+                  {validatingToken ? 'Validating interview link...' : 'Loading interview...'}
                 </p>
               </div>
             </div>
@@ -107,20 +112,32 @@ const Interview = () => {
     );
   }
 
-  // If user is not authenticated and no token, redirect to login
-  if (!user || !profile) {
+  // If user is not authenticated and no valid token/candidate data, redirect to login
+  if (!user && !candidateData) {
     return null; // This should not render as useEffect will redirect
   }
 
-  // User is authenticated - show interview content
+  // Show interview content for authenticated users OR anonymous users with valid tokens
   return (
-    <SimpleInterviewFlow
-      progress={progress}
-      answers={answers}
-      saveAnswer={saveAnswer}
-      updateProgress={updateProgress}
-      loading={interviewLoading}
-    />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      {candidateData && (
+        <div className="bg-blue-50 border-b border-blue-200 py-3">
+          <div className="max-w-4xl mx-auto px-4">
+            <p className="text-sm text-blue-700">
+              <strong>Interview for:</strong> {candidateData.name} ({candidateData.email})
+            </p>
+          </div>
+        </div>
+      )}
+      
+      <SimpleInterviewFlow
+        progress={progress}
+        answers={answers}
+        saveAnswer={saveAnswer}
+        updateProgress={updateProgress}
+        loading={interviewLoading}
+      />
+    </div>
   );
 };
 

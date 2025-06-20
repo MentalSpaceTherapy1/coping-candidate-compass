@@ -32,11 +32,46 @@ export class InterviewAnswerService {
     return { data, error };
   }
 
+  static async saveAnswerByEmail(
+    email: string, 
+    section: string, 
+    questionKey: string, 
+    value: any
+  ): Promise<{ data: any; error: any }> {
+    const dbSection = mapToDbSection(section);
+    
+    const answerData = {
+      candidate_email: email,
+      question_key: questionKey,
+      section: dbSection,
+      answer: typeof value === 'string' ? value : null,
+      metadata: typeof value !== 'string' ? { type: 'complex', value } : {}
+    };
+
+    const { data, error } = await supabase
+      .from('interview_answers')
+      .upsert(answerData, {
+        onConflict: 'candidate_email,question_key,section'
+      })
+      .select();
+
+    return { data, error };
+  }
+
   static async loadAnswers(userId: string): Promise<{ data: InterviewAnswer[] | null; error: any }> {
     const { data, error } = await supabase
       .from('interview_answers')
       .select('*')
       .eq('user_id', userId);
+
+    return { data, error };
+  }
+
+  static async loadAnswersByEmail(email: string): Promise<{ data: InterviewAnswer[] | null; error: any }> {
+    const { data, error } = await supabase
+      .from('interview_answers')
+      .select('*')
+      .eq('candidate_email', email);
 
     return { data, error };
   }

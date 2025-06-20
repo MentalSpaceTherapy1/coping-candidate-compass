@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AdminStats } from "@/components/admin/AdminStats";
@@ -43,7 +44,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <AdminHeader />
+        <AdminHeader onCandidateAdded={refetchCandidates} />
         
         <AdminStats candidates={candidates} />
         
