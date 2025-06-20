@@ -1,21 +1,6 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Calendar, Star, Eye } from "lucide-react";
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  submissionStatus: string;
-  dateSubmitted: string;
-  overallScore: number | null;
-  sections: {
-    general: number | null;
-    technical: number | null;
-    exercises: number | null;
-    culture: number | null;
-  };
-}
+import { Candidate } from "@/types/candidate";
 
 interface AdminStatsProps {
   candidates: Candidate[];

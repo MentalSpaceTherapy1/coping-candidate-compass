@@ -1,23 +1,8 @@
-
 import { ReviewButton } from "./actions/ReviewButton";
 import { ExportButton } from "./actions/ExportButton";
 import { ResendInviteButton } from "./actions/ResendInviteButton";
 import { DeleteCandidateDialog } from "./actions/DeleteCandidateDialog";
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  submissionStatus: string;
-  dateSubmitted: string;
-  overallScore: number | null;
-  sections: {
-    general: number | null;
-    technical: number | null;
-    exercises: number | null;
-    culture: number | null;
-  };
-}
+import { Candidate } from "@/types/candidate";
 
 interface CandidateActionsProps {
   candidate: Candidate;

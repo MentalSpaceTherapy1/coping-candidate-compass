@@ -1,23 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  submissionStatus: string;
-  dateSubmitted: string;
-  overallScore: number | null;
-  sections: {
-    general: number | null;
-    technical: number | null;
-    exercises: number | null;
-    culture: number | null;
-  };
-}
+import { Candidate } from "@/types/candidate";
 
 export const useCandidates = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);

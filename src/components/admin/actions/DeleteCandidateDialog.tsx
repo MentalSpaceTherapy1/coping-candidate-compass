@@ -1,25 +1,10 @@
-
 import { useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  submissionStatus: string;
-  dateSubmitted: string;
-  overallScore: number | null;
-  sections: {
-    general: number | null;
-    technical: number | null;
-    exercises: number | null;
-    culture: number | null;
-  };
-}
+import { Candidate } from "@/types/candidate";
 
 interface DeleteCandidateDialogProps {
   candidate: Candidate;

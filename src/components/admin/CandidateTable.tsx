@@ -1,25 +1,10 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CandidateActions } from "./CandidateActions";
 import { CandidateStatusBadge } from "./CandidateStatusBadge";
 import { CandidateScoreDisplay } from "./CandidateScoreDisplay";
 import { CandidateSectionScores } from "./CandidateSectionScores";
 import { CandidateTableSkeleton } from "@/components/ui/candidate-table-skeleton";
-
-interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  submissionStatus: string;
-  dateSubmitted: string;
-  overallScore: number | null;
-  sections: {
-    general: number | null;
-    technical: number | null;
-    exercises: number | null;
-    culture: number | null;
-  };
-}
+import { Candidate } from "@/types/candidate";
 
 interface CandidateTableProps {
   candidates: Candidate[];
