@@ -2,24 +2,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Filter, RefreshCw } from "lucide-react";
 
 interface AdminFiltersProps {
   searchTerm: string;
-  setSearchTerm: (term: string) => void;
+  onSearchChange: (term: string) => void;
   statusFilter: string;
-  setStatusFilter: (status: string) => void;
-  sortBy: string;
-  setSortBy: (sort: string) => void;
+  onStatusFilterChange: (status: string) => void;
+  onRefresh: () => void;
 }
 
 export const AdminFilters = ({ 
   searchTerm, 
-  setSearchTerm, 
+  onSearchChange, 
   statusFilter, 
-  setStatusFilter, 
-  sortBy, 
-  setSortBy 
+  onStatusFilterChange, 
+  onRefresh 
 }: AdminFiltersProps) => {
   return (
     <Card className="mb-6">
@@ -35,13 +34,13 @@ export const AdminFilters = ({
               <Input
                 placeholder="Search candidates by name or email..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
           </div>
           
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
             <SelectTrigger className="w-48">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue />
@@ -56,16 +55,10 @@ export const AdminFilters = ({
             </SelectContent>
           </Select>
           
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">Sort by Date</SelectItem>
-              <SelectItem value="name">Sort by Name</SelectItem>
-              <SelectItem value="score">Sort by Score</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button onClick={onRefresh} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -2,13 +2,30 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Calendar, Star, Eye } from "lucide-react";
 
-interface AdminStatsProps {
-  totalCandidates: number;
-  completedCount: number;
-  inProgressCount: number;
+interface Candidate {
+  id: string;
+  name: string;
+  email: string;
+  submissionStatus: string;
+  dateSubmitted: string;
+  overallScore: number | null;
+  sections: {
+    general: number | null;
+    technical: number | null;
+    exercises: number | null;
+    culture: number | null;
+  };
 }
 
-export const AdminStats = ({ totalCandidates, completedCount, inProgressCount }: AdminStatsProps) => {
+interface AdminStatsProps {
+  candidates: Candidate[];
+}
+
+export const AdminStats = ({ candidates }: AdminStatsProps) => {
+  const totalCandidates = candidates.length;
+  const completedCount = candidates.filter(c => c.submissionStatus === 'completed').length;
+  const inProgressCount = candidates.filter(c => c.submissionStatus === 'in-progress').length;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
       <Card>
