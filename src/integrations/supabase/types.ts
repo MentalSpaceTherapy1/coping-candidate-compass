@@ -81,6 +81,7 @@ export type Database = {
       interview_answers: {
         Row: {
           answer: string | null
+          candidate_email: string | null
           created_at: string
           id: string
           metadata: Json | null
@@ -91,6 +92,7 @@ export type Database = {
         }
         Insert: {
           answer?: string | null
+          candidate_email?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
@@ -101,6 +103,7 @@ export type Database = {
         }
         Update: {
           answer?: string | null
+          candidate_email?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
@@ -152,6 +155,7 @@ export type Database = {
       }
       interview_progress: {
         Row: {
+          candidate_email: string | null
           completed_sections: Json | null
           created_at: string | null
           current_step: number | null
@@ -162,6 +166,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          candidate_email?: string | null
           completed_sections?: Json | null
           created_at?: string | null
           current_step?: number | null
@@ -172,6 +177,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          candidate_email?: string | null
           completed_sections?: Json | null
           created_at?: string | null
           current_step?: number | null

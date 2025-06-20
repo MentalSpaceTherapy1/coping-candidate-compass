@@ -12,6 +12,7 @@ export class InterviewProgressService {
       .from('interview_progress')
       .select('*')
       .eq('user_id', userId)
+      .is('candidate_email', null)
       .single();
 
     return { data, error };
@@ -41,7 +42,8 @@ export class InterviewProgressService {
       current_step: step,
       completed_sections: completedSections || {},
       submission_status: (step === 5 && completedSections ? 'completed' : 'in-progress') as Database['public']['Tables']['interview_progress']['Row']['submission_status'],
-      submitted_at: step === 5 && completedSections ? new Date().toISOString() : null
+      submitted_at: step === 5 && completedSections ? new Date().toISOString() : null,
+      candidate_email: null // Explicitly set to null for authenticated users
     };
 
     console.log('📤 Saving progress data:', progressData);
@@ -65,6 +67,7 @@ export class InterviewProgressService {
     console.log('📈 Updating progress by email:', { email, step, completedSections });
 
     const progressData = {
+      user_id: '00000000-0000-0000-0000-000000000000', // Use placeholder UUID for anonymous users
       candidate_email: email,
       current_step: step,
       completed_sections: completedSections || {},

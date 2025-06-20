@@ -19,7 +19,8 @@ export class InterviewAnswerService {
       question_key: questionKey,
       section: dbSection,
       answer: typeof value === 'string' ? value : null,
-      metadata: typeof value !== 'string' ? { type: 'complex', value } : {}
+      metadata: typeof value !== 'string' ? { type: 'complex', value } : {},
+      candidate_email: null // Explicitly set to null for authenticated users
     };
 
     const { data, error } = await supabase
@@ -41,6 +42,7 @@ export class InterviewAnswerService {
     const dbSection = mapToDbSection(section);
     
     const answerData = {
+      user_id: '00000000-0000-0000-0000-000000000000', // Use placeholder UUID for anonymous users
       candidate_email: email,
       question_key: questionKey,
       section: dbSection,
@@ -62,7 +64,8 @@ export class InterviewAnswerService {
     const { data, error } = await supabase
       .from('interview_answers')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .is('candidate_email', null);
 
     return { data, error };
   }
