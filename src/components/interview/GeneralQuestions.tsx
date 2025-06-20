@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { getCharacterCountColor, getCharacterCountMessage } from "@/utils/formValidation";
 
 interface GeneralQuestionsProps {
   data: any;
@@ -75,7 +76,7 @@ const GeneralQuestions = ({ data, onDataChange }: GeneralQuestionsProps) => {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       onDataChange("generalQuestions", answers);
-    }, 1000); // Debounce saves by 1 second
+    }, 1000);
 
     return () => clearTimeout(timeoutId);
   }, [answers, onDataChange]);
@@ -106,36 +107,45 @@ const GeneralQuestions = ({ data, onDataChange }: GeneralQuestionsProps) => {
         </CardHeader>
       </Card>
 
-      {questions.map((q, index) => (
-        <Card key={q.id}>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <Label className="text-base font-medium leading-relaxed">
-                  {index + 1}. {q.question}
-                </Label>
-                <Badge variant={q.required ? "destructive" : "secondary"} className="ml-4 flex-shrink-0">
-                  {q.required ? "Required" : "Optional"}
-                </Badge>
-              </div>
-              
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="Please provide a detailed answer..."
-                  value={answers[q.id] || ""}
-                  onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                  className="min-h-[120px] resize-y"
-                  required={q.required}
-                />
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>{getAnswerLength(q.id)} characters</span>
-                  <span>Minimum recommended: 200 characters</span>
+      {questions.map((q, index) => {
+        const answerLength = getAnswerLength(q.id);
+        const minLength = 200;
+        
+        return (
+          <Card key={q.id}>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <Label className="text-base font-medium leading-relaxed">
+                    {index + 1}. {q.question}
+                  </Label>
+                  <Badge variant={q.required ? "destructive" : "secondary"} className="ml-4 flex-shrink-0">
+                    {q.required ? "Required" : "Optional"}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="Please provide a detailed answer with specific examples..."
+                    value={answers[q.id] || ""}
+                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                    className="min-h-[120px] resize-y"
+                    required={q.required}
+                  />
+                  <div className="flex justify-between text-sm">
+                    <span className={getCharacterCountColor(answerLength, minLength)}>
+                      {answerLength} characters
+                    </span>
+                    <span className={getCharacterCountColor(answerLength, minLength)}>
+                      {getCharacterCountMessage(answerLength, minLength)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <Card className="bg-blue-50 border-blue-200">
         <CardContent className="pt-6">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { InterviewSectionSkeleton } from "@/components/ui/interview-section-skeleton";
 import GeneralQuestions from "./GeneralQuestions";
 import TechnicalScenarios from "./TechnicalScenarios";
 import TechnicalExercises from "./TechnicalExercises";
@@ -39,7 +40,6 @@ const SimpleInterviewFlow = ({
   const CurrentStepComponent = currentStepData?.component;
 
   const handleDataChange = (stepName: string, data: any) => {
-    // Save each field in the data object
     Object.entries(data).forEach(([key, value]) => {
       saveAnswer(stepName, key, value);
     });
@@ -65,17 +65,37 @@ const SimpleInterviewFlow = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="text-center">
-                <h3 className="font-medium">Loading Interview...</h3>
-                <p className="text-sm text-gray-500">Please wait while we prepare your interview.</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div className="max-w-4xl mx-auto py-8 px-4">
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between mb-4">
+                <div className="space-y-2">
+                  <div className="h-8 w-64 bg-gray-200 animate-pulse rounded" />
+                  <div className="h-4 w-48 bg-gray-200 animate-pulse rounded" />
+                </div>
+                <div className="h-6 w-20 bg-gray-200 animate-pulse rounded-full" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="h-2 w-full bg-gray-200 animate-pulse rounded" />
+            </CardHeader>
+          </Card>
+          
+          <InterviewSectionSkeleton />
+          
+          <Card className="mt-6">
+            <CardContent className="pt-6">
+              <div className="flex justify-between">
+                <div className="h-10 w-24 bg-gray-200 animate-pulse rounded" />
+                <div className="flex space-x-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="w-3 h-3 bg-gray-200 animate-pulse rounded-full" />
+                  ))}
+                </div>
+                <div className="h-10 w-20 bg-gray-200 animate-pulse rounded" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -83,7 +103,6 @@ const SimpleInterviewFlow = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       <div className="max-w-4xl mx-auto py-8 px-4">
-        {/* Progress Header */}
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between mb-4">
@@ -101,7 +120,6 @@ const SimpleInterviewFlow = ({
           </CardHeader>
         </Card>
 
-        {/* Current Step Content */}
         {CurrentStepComponent && (
           <CurrentStepComponent
             data={answers}
@@ -109,7 +127,6 @@ const SimpleInterviewFlow = ({
           />
         )}
 
-        {/* Navigation */}
         <Card className="mt-6">
           <CardContent className="pt-6">
             <div className="flex justify-between">

@@ -4,6 +4,7 @@ import { CandidateActions } from "./CandidateActions";
 import { CandidateStatusBadge } from "./CandidateStatusBadge";
 import { CandidateScoreDisplay } from "./CandidateScoreDisplay";
 import { CandidateSectionScores } from "./CandidateSectionScores";
+import { CandidateTableSkeleton } from "@/components/ui/candidate-table-skeleton";
 
 interface Candidate {
   id: string;
@@ -22,11 +23,16 @@ interface Candidate {
 
 interface CandidateTableProps {
   candidates: Candidate[];
+  loading?: boolean;
   onCandidateDeleted?: () => void;
   onInviteResent?: () => void;
 }
 
-export const CandidateTable = ({ candidates, onCandidateDeleted, onInviteResent }: CandidateTableProps) => {
+export const CandidateTable = ({ candidates, loading = false, onCandidateDeleted, onInviteResent }: CandidateTableProps) => {
+  if (loading) {
+    return <CandidateTableSkeleton />;
+  }
+
   return (
     <Table>
       <TableHeader>

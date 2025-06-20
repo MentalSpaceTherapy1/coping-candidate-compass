@@ -29,20 +29,6 @@ const Admin = () => {
     refetchCandidates();
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-        <AdminHeader />
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading candidate data...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       <AdminHeader />
@@ -65,11 +51,19 @@ const Admin = () => {
 
         <Card>
           <CardContent className="pt-6">
-            {candidates.length === 0 ? (
+            {loading ? (
+              <CandidateTable 
+                candidates={[]} 
+                loading={true}
+                onCandidateDeleted={handleCandidateDeleted}
+                onInviteResent={handleInviteResent}
+              />
+            ) : candidates.length === 0 ? (
               <EmptyState />
             ) : (
               <CandidateTable 
                 candidates={filteredCandidates} 
+                loading={false}
                 onCandidateDeleted={handleCandidateDeleted}
                 onInviteResent={handleInviteResent}
               />
