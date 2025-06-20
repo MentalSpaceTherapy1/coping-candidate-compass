@@ -1,75 +1,77 @@
-
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState } from 'react';
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AdminStats } from "@/components/admin/AdminStats";
 import { AdminFilters } from "@/components/admin/AdminFilters";
 import { CandidateTable } from "@/components/admin/CandidateTable";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { useCandidates } from "@/hooks/useCandidates";
-import { filterCandidates, getCandidateStats } from "@/utils/candidateFilters";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Admin = () => {
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const { candidates, loading, refetchCandidates } = useCandidates();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("date");
-  
-  const { candidates, loading, refetchCandidates } = useCandidates();
-  const { user, profile } = useAuth();
-  
-  const filteredCandidates = filterCandidates(candidates, searchTerm, statusFilter);
-  const stats = getCandidateStats(candidates);
 
-  const handleCandidateDeleted = () => {
-    refetchCandidates();
-  };
+  useEffect(() => {
+    if (!loading && (!user || profile?.role !== 'admin')) {
+      navigate('/');
+    }
+  }, [user, profile, loading, navigate]);
 
-  const handleInviteResent = () => {
-    refetchCandidates();
-  };
+  const filteredCandidates = candidates.filter(candidate => {
+    const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || candidate.submissionStatus === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <AdminHeader />
-
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <AdminStats 
-          totalCandidates={stats.totalCandidates}
-          completedCount={stats.completedCount}
-          inProgressCount={stats.inProgressCount}
-        />
-
+        <AdminHeader />
+        
+        <AdminStats candidates={candidates} />
+        
         <AdminFilters
           searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
+          onSearchChange={setSearchTerm}
           statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
+          onStatusFilterChange={setStatusFilter}
+          onRefresh={refetchCandidates}
         />
 
-        <Card>
-          <CardContent className="pt-6">
-            {loading ? (
-              <CandidateTable 
-                candidates={[]} 
-                loading={true}
-                onCandidateDeleted={handleCandidateDeleted}
-                onInviteResent={handleInviteResent}
-              />
-            ) : candidates.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <CandidateTable 
-                candidates={filteredCandidates} 
-                loading={false}
-                onCandidateDeleted={handleCandidateDeleted}
-                onInviteResent={handleInviteResent}
-              />
-            )}
-          </CardContent>
-        </Card>
+        {filteredCandidates.length === 0 ? (
+          <EmptyState
+            hasSearch={searchTerm.length > 0 || statusFilter !== "all"}
+            onClearFilters={() => {
+              setSearchTerm("");
+              setStatusFilter("all");
+            }}
+          />
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <CandidateTable 
+              candidates={filteredCandidates}
+              onCandidateDeleted={refetchCandidates}
+              onInviteResent={refetchCandidates}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
